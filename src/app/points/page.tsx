@@ -13,22 +13,35 @@ export default async function PointsPage() {
 
   return (
     <div className="min-h-screen bg-[#060606]">
+      {/* Hero Banner */}
+      <div className="relative h-48 md:h-56 overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url(https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2000&auto=format&fit=crop)",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-[#060606] via-[#060606]/95 to-[#060606]/80"></div>
+        </div>
+        <div className="relative max-w-[1400px] mx-auto px-6 sm:px-8 md:px-12 lg:px-16 h-full flex items-center">
+          <div>
+            <div className="mb-4">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-[#00A0FF] hover:text-[#0088DD] transition-colors text-sm font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Dashboard
+              </Link>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white">Points System Management</h1>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-[1400px] mx-auto px-6 sm:px-8 md:px-12 lg:px-16 py-12">
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[#00A0FF] hover:text-[#0088DD] transition-colors text-sm font-medium"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dashboard
-          </Link>
-        </div>
-        
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-white mb-2">Points System Management</h1>
-        </div>
 
         <div className="space-y-16">
           <section>

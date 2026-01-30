@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Eye, EyeOff, Power, PowerOff, Pencil, Trash2 } from "lucide-react";
 import EventCheckInsView from "./EventCheckInsView";
@@ -52,6 +52,9 @@ export default function EventsManager() {
     geofencePolygon: null as Array<[number, number]> | null,
     isActive: true,
   });
+  
+  // Use ref to track latest formData to avoid closure issues
+  const formDataRef = useRef(formData);
 
   useEffect(() => {
     fetchEvents();
@@ -79,19 +82,22 @@ export default function EventsManager() {
         : "/api/events";
       const method = editingEvent ? "PATCH" : "POST";
 
+      // Use ref to get latest formData to avoid closure issues
+      const currentFormData = formDataRef.current;
+      
       const payload = {
-        ...formData,
-        geofenceType: formData.geofenceType || null,
-        geofenceLatitude: formData.geofenceLatitude
-          ? parseFloat(formData.geofenceLatitude)
+        ...currentFormData,
+        geofenceType: currentFormData.geofenceType || null,
+        geofenceLatitude: currentFormData.geofenceLatitude
+          ? parseFloat(currentFormData.geofenceLatitude)
           : null,
-        geofenceLongitude: formData.geofenceLongitude
-          ? parseFloat(formData.geofenceLongitude)
+        geofenceLongitude: currentFormData.geofenceLongitude
+          ? parseFloat(currentFormData.geofenceLongitude)
           : null,
-        geofenceRadius: formData.geofenceRadius
-          ? parseInt(formData.geofenceRadius)
+        geofenceRadius: currentFormData.geofenceRadius
+          ? parseInt(currentFormData.geofenceRadius)
           : null,
-        geofencePolygon: formData.geofencePolygon,
+        geofencePolygon: currentFormData.geofencePolygon,
       };
 
       const response = await fetch(url, {
@@ -104,28 +110,52 @@ export default function EventsManager() {
         await fetchEvents();
         setShowForm(false);
         setEditingEvent(null);
-        setFormData({
+        const resetFormData = {
           name: "",
           description: "",
           startDate: "",
           endDate: "",
           location: "",
-          geofenceType: "circle",
+          geofenceType: "circle" as "circle" | "polygon",
           geofenceLatitude: "",
           geofenceLongitude: "",
           geofenceRadius: "",
-          geofencePolygon: null,
+          geofencePolygon: null as Array<[number, number]> | null,
           isActive: true,
-        });
+        };
+        setFormData(resetFormData);
+        formDataRef.current = resetFormData; // Update ref immediately
+      } else {
+        const errorData = await response.json();
+        console.error("Error saving event:", errorData);
+        alert(`Error: ${errorData.error || "Failed to save event"}`);
       }
     } catch (error) {
       console.error("Error saving event:", error);
+      alert("An error occurred while saving the event. Please check the console for details.");
     }
   };
 
   const handleEdit = (event: Event) => {
     setEditingEvent(event);
-    setFormData({
+    
+    // Parse geofencePolygon if it's a string (JSON)
+    let parsedPolygon = event.geofencePolygon;
+    if (typeof event.geofencePolygon === "string") {
+      try {
+        parsedPolygon = JSON.parse(event.geofencePolygon);
+      } catch (e) {
+        console.error("[EventsManager] Failed to parse polygon JSON:", e);
+        parsedPolygon = null;
+      }
+    }
+    
+    // If polygon is an empty array, keep it as null
+    if (Array.isArray(parsedPolygon) && parsedPolygon.length === 0) {
+      parsedPolygon = null;
+    }
+    
+    const formDataToSet = {
       name: event.name,
       description: event.description || "",
       startDate: new Date(event.startDate).toISOString().slice(0, 16),
@@ -135,9 +165,11 @@ export default function EventsManager() {
       geofenceLatitude: event.geofenceLatitude || "",
       geofenceLongitude: event.geofenceLongitude || "",
       geofenceRadius: event.geofenceRadius?.toString() || "",
-      geofencePolygon: event.geofencePolygon || null,
+      geofencePolygon: parsedPolygon,
       isActive: event.isActive,
-    });
+    };
+    setFormData(formDataToSet);
+    formDataRef.current = formDataToSet; // Update ref immediately
     setShowForm(true);
   };
 
@@ -188,21 +220,23 @@ export default function EventsManager() {
         <h3 className="text-xl font-bold text-white">Events</h3>
         <button
           onClick={() => {
-            setShowForm(true);
-            setEditingEvent(null);
-            setFormData({
+            const resetFormData = {
               name: "",
               description: "",
               startDate: "",
               endDate: "",
               location: "",
-              geofenceType: "circle",
+              geofenceType: "circle" as "circle" | "polygon",
               geofenceLatitude: "",
               geofenceLongitude: "",
               geofenceRadius: "",
-              geofencePolygon: null,
+              geofencePolygon: null as Array<[number, number]> | null,
               isActive: true,
-            });
+            };
+            setShowForm(true);
+            setEditingEvent(null);
+            setFormData(resetFormData);
+            formDataRef.current = resetFormData; // Update ref immediately
           }}
           className="px-5 py-2.5 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors text-sm font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)]"
         >
@@ -218,9 +252,13 @@ export default function EventsManager() {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData((prev) => {
+                    const updated = { ...prev, name: e.target.value };
+                    formDataRef.current = updated;
+                    return updated;
+                  });
+                }}
                 className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
@@ -230,9 +268,13 @@ export default function EventsManager() {
               <input
                 type="text"
                 value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData((prev) => {
+                    const updated = { ...prev, location: e.target.value };
+                    formDataRef.current = updated;
+                    return updated;
+                  });
+                }}
                 className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
               />
             </div>
@@ -241,9 +283,13 @@ export default function EventsManager() {
               <input
                 type="datetime-local"
                 value={formData.startDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, startDate: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData((prev) => {
+                    const updated = { ...prev, startDate: e.target.value };
+                    formDataRef.current = updated;
+                    return updated;
+                  });
+                }}
                 className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
@@ -253,9 +299,13 @@ export default function EventsManager() {
               <input
                 type="datetime-local"
                 value={formData.endDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, endDate: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData((prev) => {
+                    const updated = { ...prev, endDate: e.target.value };
+                    formDataRef.current = updated;
+                    return updated;
+                  });
+                }}
                 className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
@@ -283,28 +333,40 @@ export default function EventsManager() {
                 }
                 polygon={formData.geofencePolygon}
                 onGeofenceTypeChange={(type) => {
-                  setFormData({
-                    ...formData,
-                    geofenceType: type,
+                  setFormData((prev) => {
+                    const updated = { ...prev, geofenceType: type };
+                    formDataRef.current = updated;
+                    return updated;
                   });
                 }}
                 onLocationChange={(lat, lng) => {
-                  setFormData({
-                    ...formData,
-                    geofenceLatitude: lat.toString(),
-                    geofenceLongitude: lng.toString(),
+                  setFormData((prev) => {
+                    const updated = {
+                      ...prev,
+                      geofenceLatitude: lat.toString(),
+                      geofenceLongitude: lng.toString(),
+                    };
+                    formDataRef.current = updated;
+                    return updated;
                   });
                 }}
                 onRadiusChange={(radius) => {
-                  setFormData({
-                    ...formData,
-                    geofenceRadius: radius.toString(),
+                  setFormData((prev) => {
+                    const updated = { ...prev, geofenceRadius: radius.toString() };
+                    formDataRef.current = updated;
+                    return updated;
                   });
                 }}
                 onPolygonChange={(polygon) => {
-                  setFormData({
-                    ...formData,
-                    geofencePolygon: polygon,
+                  // Update state and ref together inside the state updater
+                  setFormData((prev) => {
+                    const updated = {
+                      ...prev,
+                      geofencePolygon: polygon,
+                    };
+                    // Update ref synchronously inside the state updater
+                    formDataRef.current = updated;
+                    return updated;
                   });
                 }}
               />
@@ -315,9 +377,13 @@ export default function EventsManager() {
                 <input
                   type="checkbox"
                   checked={formData.isActive}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isActive: e.target.checked })
-                  }
+                  onChange={(e) => {
+                    setFormData((prev) => {
+                      const updated = { ...prev, isActive: e.target.checked };
+                      formDataRef.current = updated;
+                      return updated;
+                    });
+                  }}
                   className="w-5 h-5 rounded border-[#1A1A1A] bg-[#0F0F0F] text-[#00A0FF] focus:ring-[#00A0FF] focus:ring-2"
                 />
                 <span className="ml-2 text-[#AAAAAA] text-sm">
@@ -331,9 +397,13 @@ export default function EventsManager() {
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData((prev) => {
+                    const updated = { ...prev, description: e.target.value };
+                    formDataRef.current = updated;
+                    return updated;
+                  });
+                }}
                 className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors resize-none"
                 rows={3}
               />

@@ -23,7 +23,42 @@ export async function GET(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    return NextResponse.json(event);
+    // Drizzle returns JSONB as objects/arrays directly
+    let geofencePolygon = event.geofencePolygon;
+    if (geofencePolygon && typeof geofencePolygon === "string") {
+      try {
+        geofencePolygon = JSON.parse(geofencePolygon);
+      } catch (e) {
+        console.error("[API GET] Failed to parse geofencePolygon:", e);
+        geofencePolygon = null;
+      }
+    }
+    // If it's an empty array, treat as null
+    if (Array.isArray(geofencePolygon) && geofencePolygon.length === 0) {
+      geofencePolygon = null;
+    }
+    
+    let metadata = event.metadata;
+    if (metadata && typeof metadata === "string") {
+      try {
+        metadata = JSON.parse(metadata);
+      } catch (e) {
+        console.error("[API GET] Failed to parse metadata:", e);
+        metadata = null;
+      }
+    }
+    
+    const parsedEvent = {
+      ...event,
+      startDate: event.startDate instanceof Date ? event.startDate.toISOString() : new Date(event.startDate).toISOString(),
+      endDate: event.endDate instanceof Date ? event.endDate.toISOString() : new Date(event.endDate).toISOString(),
+      createdAt: event.createdAt instanceof Date ? event.createdAt.toISOString() : new Date(event.createdAt).toISOString(),
+      updatedAt: event.updatedAt instanceof Date ? event.updatedAt.toISOString() : new Date(event.updatedAt).toISOString(),
+      geofencePolygon,
+      metadata,
+    };
+
+    return NextResponse.json(parsedEvent);
   } catch (error) {
     console.error("Error fetching event:", error);
     return NextResponse.json(
@@ -52,8 +87,26 @@ export async function PATCH(
 
     if (body.name !== undefined) updateData.name = body.name;
     if (body.description !== undefined) updateData.description = body.description;
-    if (body.startDate !== undefined) updateData.startDate = new Date(body.startDate);
-    if (body.endDate !== undefined) updateData.endDate = new Date(body.endDate);
+    if (body.startDate !== undefined) {
+      const startDateObj = new Date(body.startDate);
+      if (isNaN(startDateObj.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid start date format" },
+          { status: 400 }
+        );
+      }
+      updateData.startDate = startDateObj;
+    }
+    if (body.endDate !== undefined) {
+      const endDateObj = new Date(body.endDate);
+      if (isNaN(endDateObj.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid end date format" },
+          { status: 400 }
+        );
+      }
+      updateData.endDate = endDateObj;
+    }
     if (body.location !== undefined) updateData.location = body.location;
     if (body.geofenceType !== undefined) updateData.geofenceType = body.geofenceType || null;
     if (body.geofenceLatitude !== undefined) {
@@ -64,7 +117,14 @@ export async function PATCH(
     }
     if (body.geofenceRadius !== undefined) updateData.geofenceRadius = body.geofenceRadius;
     if (body.geofencePolygon !== undefined) {
-      updateData.geofencePolygon = body.geofencePolygon ? JSON.stringify(body.geofencePolygon) : null;
+      // Drizzle JSONB accepts objects/arrays directly, no need to stringify
+      // Only set if it's a valid non-empty array
+      updateData.geofencePolygon = 
+        body.geofencePolygon && 
+        Array.isArray(body.geofencePolygon) && 
+        body.geofencePolygon.length > 0 
+          ? body.geofencePolygon 
+          : null;
     }
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
     if (body.metadata !== undefined) {
@@ -81,7 +141,42 @@ export async function PATCH(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    return NextResponse.json(event);
+    // Drizzle returns JSONB as objects/arrays directly
+    let geofencePolygon = event.geofencePolygon;
+    if (geofencePolygon && typeof geofencePolygon === "string") {
+      try {
+        geofencePolygon = JSON.parse(geofencePolygon);
+      } catch (e) {
+        console.error("[API PATCH] Failed to parse geofencePolygon:", e);
+        geofencePolygon = null;
+      }
+    }
+    // If it's an empty array, treat as null
+    if (Array.isArray(geofencePolygon) && geofencePolygon.length === 0) {
+      geofencePolygon = null;
+    }
+    
+    let metadata = event.metadata;
+    if (metadata && typeof metadata === "string") {
+      try {
+        metadata = JSON.parse(metadata);
+      } catch (e) {
+        console.error("[API PATCH] Failed to parse metadata:", e);
+        metadata = null;
+      }
+    }
+    
+    const parsedEvent = {
+      ...event,
+      startDate: event.startDate instanceof Date ? event.startDate.toISOString() : new Date(event.startDate).toISOString(),
+      endDate: event.endDate instanceof Date ? event.endDate.toISOString() : new Date(event.endDate).toISOString(),
+      createdAt: event.createdAt instanceof Date ? event.createdAt.toISOString() : new Date(event.createdAt).toISOString(),
+      updatedAt: event.updatedAt instanceof Date ? event.updatedAt.toISOString() : new Date(event.updatedAt).toISOString(),
+      geofencePolygon,
+      metadata,
+    };
+
+    return NextResponse.json(parsedEvent);
   } catch (error) {
     console.error("Error updating event:", error);
     return NextResponse.json(

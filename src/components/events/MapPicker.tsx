@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Circle, Marker, Polygon, useMap } from "react-leaflet";
 import { FeatureGroup } from "react-leaflet";
 import { EditControl } from "react-leaflet-draw";
@@ -41,6 +41,91 @@ function MapCenter({ center }: { center: [number, number] }) {
   return null;
 }
 
+// Component to initialize geofence when map is ready
+function GeofenceInitializer({
+  featureGroup,
+  geofenceType,
+  latitude,
+  longitude,
+  radius,
+  polygon,
+  onLayerSet,
+}: {
+  featureGroup: L.FeatureGroup | null;
+  geofenceType: "circle" | "polygon";
+  latitude: number | null;
+  longitude: number | null;
+  radius: number | null;
+  polygon: Array<[number, number]> | null;
+  onLayerSet: (layer: L.Circle | L.Polygon | null) => void;
+}) {
+  const map = useMap();
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!featureGroup) {
+      return;
+    }
+
+    if (initializedRef.current) {
+      return;
+    }
+
+    // Wait for map to be fully ready
+    const timeoutId = setTimeout(() => {
+      // Only clear layers if we're initializing from existing data (not from user drawing)
+      // If there are already layers, they might be from user drawing, so don't clear them
+      const existingLayers = featureGroup.getLayers();
+      if (existingLayers.length > 0) {
+        // There are existing layers - user might have drawn something new
+        initializedRef.current = true;
+        return;
+      }
+      
+      // Clear any existing layer (only if we got here, meaning no layers exist)
+      featureGroup.clearLayers();
+
+      // Add existing geofence if we have valid data
+      if (geofenceType === "circle" && latitude !== null && longitude !== null && radius !== null && radius > 0) {
+        const circle = L.circle([latitude, longitude], {
+          radius: radius,
+          color: "#3b82f6",
+          fillColor: "#3b82f6",
+          fillOpacity: 0.2,
+        });
+        featureGroup.addLayer(circle);
+        onLayerSet(circle);
+        initializedRef.current = true;
+      } else if (geofenceType === "polygon" && polygon && polygon.length > 0) {
+        const polygonLayer = L.polygon(polygon, {
+          color: "#3b82f6",
+          fillColor: "#3b82f6",
+          fillOpacity: 0.2,
+        });
+        featureGroup.addLayer(polygonLayer);
+        onLayerSet(polygonLayer);
+        initializedRef.current = true;
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [featureGroup, geofenceType, latitude, longitude, radius, polygon, onLayerSet, map]);
+
+  // Reset when geofence data changes, but only if we're loading from props (not user interaction)
+  // If FeatureGroup has layers, those are from user drawing, so don't reset
+  useEffect(() => {
+    // Check if FeatureGroup has layers - if it does, user might have just drawn something
+    // Don't reset in that case to preserve user-drawn shapes
+    if (featureGroup && featureGroup.getLayers().length > 0) {
+      return;
+    }
+    
+    initializedRef.current = false;
+  }, [geofenceType, latitude, longitude, radius, polygon, featureGroup]);
+
+  return null;
+}
+
 export default function MapPicker({
   geofenceType,
   latitude,
@@ -53,15 +138,33 @@ export default function MapPicker({
   onPolygonChange,
 }: MapPickerProps) {
   const [mapReady, setMapReady] = useState(false);
-  const [featureGroup, setFeatureGroup] = useState<L.FeatureGroup | null>(null);
+  const [featureGroupReady, setFeatureGroupReady] = useState(false);
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const existingLayerRef = useRef<L.Circle | L.Polygon | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+
 
   // Default to Las Vegas, NV (based on memory about scheduler city)
   const defaultLat = 36.1699;
   const defaultLng = -115.1398;
 
   const currentType = geofenceType ?? "circle";
-  const currentLat = latitude ?? defaultLat;
-  const currentLng = longitude ?? defaultLng;
+  
+  // Calculate center for polygon if we have one
+  let currentLat = latitude ?? defaultLat;
+  let currentLng = longitude ?? defaultLng;
+  
+  if (currentType === "polygon" && polygon && polygon.length > 0) {
+    // Calculate center of polygon bounds
+    const lats = polygon.map((p) => p[0]);
+    const lngs = polygon.map((p) => p[1]);
+    currentLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+    currentLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
+  } else if (!latitude || !longitude) {
+    currentLat = defaultLat;
+    currentLng = defaultLng;
+  }
+  
   const currentRadius = radius ?? 100; // Default 100 meters
   const currentPolygon = polygon ?? null;
 
@@ -69,8 +172,25 @@ export default function MapPicker({
     setMapReady(true);
   }, []);
 
+  // Callback to set FeatureGroup ref
+  const setFeatureGroup = (fg: L.FeatureGroup | null) => {
+    featureGroupRef.current = fg;
+    setFeatureGroupReady(!!fg);
+  };
+
+  // Callback to set the layer reference
+  const setLayerRef = (layer: L.Circle | L.Polygon | null) => {
+    existingLayerRef.current = layer;
+  };
+
   const handleCreated = (e: L.DrawEvents.Created) => {
     const { layerType, layer } = e;
+    
+    // Clear existing layer reference
+    if (existingLayerRef.current && featureGroupRef.current) {
+      featureGroupRef.current.removeLayer(existingLayerRef.current);
+      existingLayerRef.current = null;
+    }
     
     if (layerType === "circle") {
       const circle = layer as L.Circle;
@@ -79,18 +199,22 @@ export default function MapPicker({
       onLocationChange(center.lat, center.lng);
       onRadiusChange(Math.round(radius));
       onGeofenceTypeChange("circle");
+      existingLayerRef.current = circle;
     } else if (layerType === "polygon") {
       const polygonLayer = layer as L.Polygon;
-      const latlngs = polygonLayer.getLatLngs()[0] as L.LatLng[];
-      const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
-      onPolygonChange(coordinates);
-      onGeofenceTypeChange("polygon");
-    }
-    
-    // Clear existing layers
-    if (featureGroup) {
-      featureGroup.clearLayers();
-      featureGroup.addLayer(layer);
+      try {
+        const latlngs = polygonLayer.getLatLngs()[0] as L.LatLng[];
+        if (!latlngs || latlngs.length === 0) {
+          console.error("[MapPicker] Polygon has no coordinates!");
+          return;
+        }
+        const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
+        onPolygonChange(coordinates);
+        onGeofenceTypeChange("polygon");
+        existingLayerRef.current = polygonLayer;
+      } catch (error) {
+        console.error("[MapPicker] Error extracting polygon coordinates:", error);
+      }
     }
   };
 
@@ -113,6 +237,10 @@ export default function MapPicker({
   };
 
   const handleDeleted = () => {
+    if (existingLayerRef.current && featureGroupRef.current) {
+      featureGroupRef.current.removeLayer(existingLayerRef.current);
+      existingLayerRef.current = null;
+    }
     if (currentType === "circle") {
       onLocationChange(defaultLat, defaultLng);
       onRadiusChange(100);
@@ -142,12 +270,15 @@ export default function MapPicker({
       circlemarker: false,
       polyline: false,
     },
-    edit: featureGroup
+    edit: featureGroupReady && featureGroupRef.current
       ? {
-          featureGroup: featureGroup,
+          featureGroup: featureGroupRef.current,
           remove: true,
         }
-      : undefined,
+      : {
+          featureGroup: featureGroupRef.current || ({} as L.FeatureGroup),
+          remove: false,
+        },
   };
 
   return (
@@ -164,9 +295,10 @@ export default function MapPicker({
               checked={currentType === "circle"}
               onChange={() => {
                 onGeofenceTypeChange("circle");
-                if (featureGroup) {
-                  featureGroup.clearLayers();
+                if (featureGroupRef.current) {
+                  featureGroupRef.current.clearLayers();
                 }
+                existingLayerRef.current = null;
               }}
               className="w-4 h-4 cursor-pointer accent-[#00A0FF]"
             />
@@ -180,9 +312,10 @@ export default function MapPicker({
               checked={currentType === "polygon"}
               onChange={() => {
                 onGeofenceTypeChange("polygon");
-                if (featureGroup) {
-                  featureGroup.clearLayers();
+                if (featureGroupRef.current) {
+                  featureGroupRef.current.clearLayers();
                 }
+                existingLayerRef.current = null;
               }}
               className="w-4 h-4 cursor-pointer accent-[#00A0FF]"
             />
@@ -206,42 +339,37 @@ export default function MapPicker({
           <MapCenter center={[currentLat, currentLng]} />
           
           <FeatureGroup ref={setFeatureGroup}>
-            {featureGroup && drawOptions.draw && (
+            {featureGroupReady && (
               <EditControl
                 position="topright"
                 onCreated={handleCreated}
                 onEdited={handleEdited}
                 onDeleted={handleDeleted}
-                draw={drawOptions.draw}
-                edit={drawOptions.edit}
-              />
-            )}
-            
-            {/* Display existing circle geofence */}
-            {currentType === "circle" && currentLat && currentLng && currentRadius > 0 && (
-              <Circle
-                center={[currentLat, currentLng]}
-                radius={currentRadius}
-                pathOptions={{
-                  color: "#3b82f6",
-                  fillColor: "#3b82f6",
-                  fillOpacity: 0.2,
+                draw={{
+                  circle: currentType === "circle" ? {} : false,
+                  polygon: currentType === "polygon" ? {} : false,
+                  rectangle: false,
+                  marker: false,
+                  circlemarker: false,
+                  polyline: false,
                 }}
-              />
-            )}
-            
-            {/* Display existing polygon geofence */}
-            {currentType === "polygon" && currentPolygon && currentPolygon.length > 0 && (
-              <Polygon
-                positions={currentPolygon}
-                pathOptions={{
-                  color: "#3b82f6",
-                  fillColor: "#3b82f6",
-                  fillOpacity: 0.2,
-                }}
+                edit={{
+                  remove: true,
+                } as any}
               />
             )}
           </FeatureGroup>
+          {featureGroupReady && featureGroupRef.current && (
+            <GeofenceInitializer
+              featureGroup={featureGroupRef.current}
+              geofenceType={currentType}
+              latitude={latitude}
+              longitude={longitude}
+              radius={radius}
+              polygon={currentPolygon}
+              onLayerSet={setLayerRef}
+            />
+          )}
         </MapContainer>
       </div>
 
@@ -286,8 +414,8 @@ export default function MapPicker({
               <input
                 type="range"
                 min="10"
-                max="5000"
-                step="10"
+                max="100000"
+                step="100"
                 value={currentRadius}
                 onChange={(e) => onRadiusChange(parseInt(e.target.value))}
                 className="w-full accent-[#00A0FF]"
@@ -295,11 +423,11 @@ export default function MapPicker({
               <input
                 type="number"
                 min="10"
-                max="5000"
+                max="100000"
                 value={currentRadius}
                 onChange={(e) => {
                   const r = parseInt(e.target.value);
-                  if (!isNaN(r) && r >= 10 && r <= 5000) {
+                  if (!isNaN(r) && r >= 10 && r <= 100000) {
                     onRadiusChange(r);
                   }
                 }}
