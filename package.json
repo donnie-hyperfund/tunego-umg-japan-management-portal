@@ -1,0 +1,43 @@
+{
+  "name": "tunego-management-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Management portal for Fango point system and live events",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
+    "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
+    "db:push": "dotenv -e .env.local -- drizzle-kit push",
+    "db:studio": "dotenv -e .env.local -- drizzle-kit studio"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.32.0",
+    "@clerk/themes": "^2.4.30",
+    "@neondatabase/serverless": "^1.0.2",
+    "@types/leaflet": "^1.9.21",
+    "@types/leaflet-draw": "^1.0.13",
+    "drizzle-orm": "^0.44.6",
+    "leaflet": "^1.9.4",
+    "next": "15.5.3",
+    "react": "19.1.4",
+    "react-dom": "19.1.4",
+    "react-leaflet": "^5.0.0",
+    "react-leaflet-draw": "^0.21.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv-cli": "^10.0.0",
+    "drizzle-kit": "^0.31.5",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
