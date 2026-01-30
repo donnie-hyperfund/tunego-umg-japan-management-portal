@@ -3,7 +3,11 @@ import { neon } from '@neondatabase/serverless';
 import * as schema from './schema';
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set');
+  throw new Error(
+    'DATABASE_URL environment variable is not set. ' +
+    'Please set it in Vercel Dashboard → Settings → Environment Variables. ' +
+    'Get your database URL from Neon Dashboard → Connection Details.'
+  );
 }
 
 // Use HTTP connection instead of WebSocket for better compatibility

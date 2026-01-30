@@ -81,7 +81,21 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const updateData: any = {
+    const updateData: Partial<{
+      name: string;
+      description: string | null;
+      startDate: Date;
+      endDate: Date;
+      location: string | null;
+      geofenceType: string | null;
+      geofenceLatitude: string | null;
+      geofenceLongitude: string | null;
+      geofenceRadius: number | null;
+      geofencePolygon: Array<[number, number]> | null;
+      isActive: boolean;
+      metadata: string | null;
+      updatedAt: Date;
+    }> = {
       updatedAt: new Date(),
     };
 

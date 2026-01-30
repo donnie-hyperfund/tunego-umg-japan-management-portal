@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { MapContainer, TileLayer, Circle, Marker, Polygon, useMap } from "react-leaflet";
+import { useEffect, useState, useRef } from "react";
+import { MapContainer, TileLayer, Circle, Polygon, useMap } from "react-leaflet";
 import { FeatureGroup } from "react-leaflet";
 import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
@@ -10,6 +10,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 
 // Fix for default marker icon in Next.js
 if (typeof window !== "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -141,7 +142,6 @@ export default function MapPicker({
   const [featureGroupReady, setFeatureGroupReady] = useState(false);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const existingLayerRef = useRef<L.Circle | L.Polygon | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
 
 
   // Default to Las Vegas, NV (based on memory about scheduler city)
@@ -251,7 +251,7 @@ export default function MapPicker({
 
   if (!mapReady) {
     return (
-      <div className="w-full h-96 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg flex items-center justify-center">
+      <div className="w-full h-64 sm:h-80 md:h-96 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A0FF] mb-4"></div>
           <p className="text-[#AAAAAA]">Loading map...</p>
@@ -260,34 +260,13 @@ export default function MapPicker({
     );
   }
 
-  const drawOptions: L.Control.DrawConstructorOptions = {
-    position: "topright",
-    draw: {
-      circle: currentType === "circle" ? {} : false,
-      polygon: currentType === "polygon" ? {} : false,
-      rectangle: false,
-      marker: false,
-      circlemarker: false,
-      polyline: false,
-    },
-    edit: featureGroupReady && featureGroupRef.current
-      ? {
-          featureGroup: featureGroupRef.current,
-          remove: true,
-        }
-      : {
-          featureGroup: featureGroupRef.current || ({} as L.FeatureGroup),
-          remove: false,
-        },
-  };
-
   return (
     <div className="w-full space-y-6">
       {/* Geofence Type Selector */}
       <div>
-        <label className="block text-sm font-medium mb-3 text-[#CCCCCC]">Geofence Type</label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer group">
+        <label className="block text-sm font-medium mb-2 sm:mb-3 text-[#CCCCCC]">Geofence Type</label>
+        <div className="flex gap-3 sm:gap-4">
+          <label className="flex items-center gap-2 cursor-pointer group touch-manipulation">
             <input
               type="radio"
               name="geofenceType"
@@ -300,11 +279,11 @@ export default function MapPicker({
                 }
                 existingLayerRef.current = null;
               }}
-              className="w-4 h-4 cursor-pointer accent-[#00A0FF]"
+              className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer accent-[#00A0FF]"
             />
-            <span className="text-[#AAAAAA] group-hover:text-white transition-colors">Circle</span>
+            <span className="text-sm sm:text-base text-[#AAAAAA] group-hover:text-white transition-colors">Circle</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer group">
+          <label className="flex items-center gap-2 cursor-pointer group touch-manipulation">
             <input
               type="radio"
               name="geofenceType"
@@ -317,15 +296,15 @@ export default function MapPicker({
                 }
                 existingLayerRef.current = null;
               }}
-              className="w-4 h-4 cursor-pointer accent-[#00A0FF]"
+              className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer accent-[#00A0FF]"
             />
-            <span className="text-[#AAAAAA] group-hover:text-white transition-colors">Polygon</span>
+            <span className="text-sm sm:text-base text-[#AAAAAA] group-hover:text-white transition-colors">Polygon</span>
           </label>
         </div>
       </div>
 
       {/* Map */}
-      <div className="h-96 w-full rounded-lg overflow-hidden border border-[#1A1A1A] relative shadow-lg">
+      <div className="h-64 sm:h-80 md:h-96 w-full rounded-lg overflow-hidden border border-[#1A1A1A] relative shadow-lg">
         <MapContainer
           center={[currentLat, currentLng]}
           zoom={13}
@@ -355,7 +334,7 @@ export default function MapPicker({
                 }}
                 edit={{
                   remove: true,
-                } as any}
+                }}
               />
             )}
           </FeatureGroup>
@@ -375,9 +354,9 @@ export default function MapPicker({
 
       {/* Circle Controls */}
       {currentType === "circle" && (
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           <div>
-            <label className="block text-sm font-medium mb-3 text-[#CCCCCC]">Latitude</label>
+            <label className="block text-sm font-medium mb-2 sm:mb-3 text-[#CCCCCC]">Latitude</label>
             <input
               type="number"
               step="any"
@@ -388,11 +367,11 @@ export default function MapPicker({
                   onLocationChange(lat, currentLng);
                 }
               }}
-              className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-3 text-[#CCCCCC]">Longitude</label>
+            <label className="block text-sm font-medium mb-2 sm:mb-3 text-[#CCCCCC]">Longitude</label>
             <input
               type="number"
               step="any"
@@ -403,14 +382,14 @@ export default function MapPicker({
                   onLocationChange(currentLat, lng);
                 }
               }}
-              className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-3 text-[#CCCCCC]">
+          <div className="sm:col-span-2 md:col-span-1">
+            <label className="block text-sm font-medium mb-2 sm:mb-3 text-[#CCCCCC]">
               Radius (meters)
             </label>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <input
                 type="range"
                 min="10"
@@ -431,7 +410,7 @@ export default function MapPicker({
                     onRadiusChange(r);
                   }
                 }}
-                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
               />
             </div>
           </div>
@@ -441,12 +420,12 @@ export default function MapPicker({
       {/* Polygon Info */}
       {currentType === "polygon" && currentPolygon && currentPolygon.length > 0 && (
         <div>
-          <label className="block text-sm font-medium mb-3 text-[#CCCCCC]">
+          <label className="block text-sm font-medium mb-2 sm:mb-3 text-[#CCCCCC]">
             Polygon Coordinates ({currentPolygon.length} points)
           </label>
-          <div className="max-h-32 overflow-y-auto p-4 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-xs font-mono text-[#AAAAAA]">
+          <div className="max-h-24 sm:max-h-32 overflow-y-auto p-3 sm:p-4 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-xs font-mono text-[#AAAAAA]">
             {currentPolygon.map((coord, idx) => (
-              <div key={idx} className="py-1">
+              <div key={idx} className="py-0.5 sm:py-1">
                 [{coord[0].toFixed(6)}, {coord[1].toFixed(6)}]
               </div>
             ))}
@@ -454,7 +433,7 @@ export default function MapPicker({
         </div>
       )}
 
-      <p className="text-sm text-[#8A8A8A] leading-relaxed mt-2">
+      <p className="text-xs sm:text-sm text-[#8A8A8A] leading-relaxed mt-2">
         {currentType === "circle"
           ? "Click the circle tool in the top-right corner, then click and drag on the map to draw a circle geofence. You can also adjust coordinates and radius manually."
           : "Click the polygon tool in the top-right corner, then click on the map to add points. Double-click to finish the polygon. You can edit or delete the polygon using the tools."}

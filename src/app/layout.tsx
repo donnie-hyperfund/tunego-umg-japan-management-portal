@@ -11,6 +11,11 @@ export const metadata: Metadata = {
     shortcut: "/logo-icon.svg",
     apple: "/logo-icon.svg",
   },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
 };
 
 export default function RootLayout({

@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    let query = db.select().from(schema.events);
-
     const conditions = [];
 
     if (isActive !== null) {
@@ -29,9 +27,10 @@ export async function GET(request: NextRequest) {
       conditions.push(lte(schema.events.endDate, new Date(endDate)));
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
+    const baseQuery = db.select().from(schema.events);
+    const query = conditions.length > 0 
+      ? baseQuery.where(and(...conditions))
+      : baseQuery;
 
     const events = await query.orderBy(desc(schema.events.startDate));
 

@@ -36,17 +36,17 @@ export default async function PointsPage() {
                 Back to Dashboard
               </Link>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white">Points System Management</h1>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">Points System Management</h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-6 sm:px-8 md:px-12 lg:px-16 py-12">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 py-8 md:py-12">
 
-        <div className="space-y-16">
+        <div className="space-y-8 md:space-y-16">
           <section>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Point Rules</h2>
+            <div className="mb-4 md:mb-6">
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Point Rules</h2>
               <p className="text-[#8A8A8A] text-sm leading-relaxed">
                 Manage point earning rules for different actions (drop purchases, social media, etc.)
               </p>
@@ -55,8 +55,8 @@ export default async function PointsPage() {
           </section>
 
           <section>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Point Transactions</h2>
+            <div className="mb-4 md:mb-6">
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Point Transactions</h2>
               <p className="text-[#8A8A8A] text-sm leading-relaxed">
                 View and manage all point transactions
               </p>

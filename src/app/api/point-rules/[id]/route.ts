@@ -46,7 +46,15 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const updateData: any = {
+    const updateData: Partial<{
+      name: string;
+      description: string | null;
+      points: number;
+      source: string;
+      isActive: boolean;
+      metadata: string | null;
+      updatedAt: Date;
+    }> = {
       updatedAt: new Date(),
     };
 

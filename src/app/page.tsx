@@ -23,18 +23,18 @@ export default async function Home() {
         </div>
         <div className="relative max-w-[1400px] mx-auto px-6 sm:px-8 md:px-12 lg:px-16 h-full flex items-center">
           <div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-4 text-white" style={{ fontFamily: '"Avenir Next", sans-serif' }}>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-white" style={{ fontFamily: '"Avenir Next", sans-serif' }}>
               TuneGO Management Portal
             </h1>
-            <p className="text-[#CCCCCC] text-lg md:text-xl leading-relaxed max-w-2xl">
+            <p className="text-[#CCCCCC] text-base sm:text-lg md:text-xl leading-relaxed max-w-2xl">
               Manage points, events, and user interactions for Universal Music Japan
             </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-6 sm:px-8 md:px-12 lg:px-16 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 py-12 md:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <Link
             href="/points"
             className="group relative block overflow-hidden bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl hover:border-[#00A0FF] transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,160,255,0.2)]"
@@ -45,9 +45,9 @@ export default async function Home() {
                 backgroundImage: "url(https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=800&auto=format&fit=crop)",
               }}
             ></div>
-            <div className="relative p-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">Points System</h2>
+                <div className="relative p-6 md:p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl md:text-2xl font-bold text-white">Points System</h2>
                 <svg className="w-6 h-6 text-[#00A0FF] group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -68,9 +68,9 @@ export default async function Home() {
                 backgroundImage: "url(https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?q=80&w=800&auto=format&fit=crop)",
               }}
             ></div>
-            <div className="relative p-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">Live Events</h2>
+                <div className="relative p-6 md:p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl md:text-2xl font-bold text-white">Live Events</h2>
                 <svg className="w-6 h-6 text-[#00A0FF] group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

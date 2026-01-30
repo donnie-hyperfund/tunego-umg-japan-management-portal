@@ -38,7 +38,7 @@ interface Event {
   geofenceRadius: number | null;
   geofencePolygon: Array<[number, number]> | null;
   isActive: boolean;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -227,8 +227,8 @@ export default function EventsManager() {
 
   return (
     <div className="bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl shadow-lg">
-      <div className="flex justify-between items-center p-6 border-b border-[#1A1A1A]">
-        <h3 className="text-xl font-bold text-white">Events</h3>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 md:p-6 border-b border-[#1A1A1A]">
+        <h3 className="text-lg md:text-xl font-bold text-white">Events</h3>
         <button
           onClick={() => {
             const resetFormData = {
@@ -256,8 +256,8 @@ export default function EventsManager() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="p-6 border-b border-[#1A1A1A] bg-[#060606]">
-          <div className="grid grid-cols-2 gap-6 mb-6">
+        <form onSubmit={handleSubmit} className="p-4 md:p-6 border-b border-[#1A1A1A] bg-[#060606]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Name</label>
               <input
@@ -420,10 +420,10 @@ export default function EventsManager() {
               />
             </div>
           </div>
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               type="submit"
-              className="px-5 py-2.5 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors text-sm font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)]"
+              className="px-5 py-2.5 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors text-sm font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)] w-full sm:w-auto"
             >
               {editingEvent ? "Update Event" : "Create Event"}
             </button>
@@ -433,7 +433,7 @@ export default function EventsManager() {
                 setShowForm(false);
                 setEditingEvent(null);
               }}
-              className="px-5 py-2.5 bg-[#1A1A1A] text-[#CCCCCC] rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm font-medium border border-[#2A2A2A]"
+              className="px-5 py-2.5 bg-[#1A1A1A] text-[#CCCCCC] rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm font-medium border border-[#2A2A2A] w-full sm:w-auto"
             >
               Cancel
             </button>
@@ -441,7 +441,8 @@ export default function EventsManager() {
         </form>
       )}
 
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#1A1A1A] bg-[#060606]">
@@ -582,6 +583,151 @@ export default function EventsManager() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4 p-4">
+        {events.length === 0 ? (
+          <div className="text-center py-12 text-[#6A6A6A]">
+            No events found. Create one to get started.
+          </div>
+        ) : (
+          events.map((event) => (
+            <div
+              key={event.id}
+              className="bg-[#060606] border border-[#1A1A1A] rounded-lg p-4 space-y-3"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="text-white font-medium text-base mb-1">{event.name}</h4>
+                  <p className="text-[#AAAAAA] text-sm">{event.location || "No location"}</p>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${
+                    event.isActive
+                      ? "bg-[#00A0FF]/20 text-[#00A0FF] border border-[#00A0FF]/30"
+                      : "bg-[#3A3A3A] text-[#8A8A8A] border border-[#2A2A2A]"
+                  }`}
+                >
+                  {event.isActive ? "Active" : "Inactive"}
+                </span>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-[#8A8A8A]">Start:</span>
+                  <span className="text-[#AAAAAA]">{new Date(event.startDate).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#8A8A8A]">End:</span>
+                  <span className="text-[#AAAAAA]">{new Date(event.endDate).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#8A8A8A]">Geofence:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#AAAAAA] text-right">
+                      {event.geofenceType === "polygon" && event.geofencePolygon
+                        ? `Polygon (${event.geofencePolygon.length} points)`
+                        : event.geofenceType === "circle" &&
+                          event.geofenceLatitude &&
+                          event.geofenceLongitude
+                        ? `Circle (${event.geofenceRadius}m)`
+                        : "-"}
+                    </span>
+                    {(event.geofenceType === "polygon" && event.geofencePolygon) ||
+                    (event.geofenceType === "circle" &&
+                      event.geofenceLatitude &&
+                      event.geofenceLongitude) ? (
+                      <button
+                        onClick={() =>
+                          setPreviewEventId(
+                            previewEventId === event.id ? null : event.id
+                          )
+                        }
+                        className="p-2 text-[#00A0FF] hover:text-[#0088DD] hover:bg-[#00A0FF]/10 rounded transition-colors"
+                        title="Preview geofence on map"
+                      >
+                        <MapPin className="w-4 h-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                {previewEventId === event.id && (
+                  <div className="mt-3 -mx-4">
+                    <GeofencePreview
+                      geofenceType={event.geofenceType}
+                      latitude={
+                        event.geofenceLatitude
+                          ? parseFloat(event.geofenceLatitude)
+                          : null
+                      }
+                      longitude={
+                        event.geofenceLongitude
+                          ? parseFloat(event.geofenceLongitude)
+                          : null
+                      }
+                      radius={event.geofenceRadius}
+                      polygon={event.geofencePolygon}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-[#1A1A1A]">
+                <button
+                  onClick={() =>
+                    setSelectedEventId(
+                      selectedEventId === event.id ? null : event.id
+                    )
+                  }
+                  className="flex-1 px-3 py-2.5 text-[#00A0FF] hover:bg-[#00A0FF]/10 rounded transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  {selectedEventId === event.id ? (
+                    <>
+                      <EyeOff className="w-4 h-4" />
+                      <span>Hide Check-ins</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" />
+                      <span>View Check-ins</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => toggleActive(event)}
+                  className="flex-1 px-3 py-2.5 text-[#00A0FF] hover:bg-[#00A0FF]/10 rounded transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  {event.isActive ? (
+                    <>
+                      <PowerOff className="w-4 h-4" />
+                      <span>Deactivate</span>
+                    </>
+                  ) : (
+                    <>
+                      <Power className="w-4 h-4" />
+                      <span>Activate</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleEdit(event)}
+                  className="px-3 py-2.5 text-[#FF9900] hover:bg-[#FF9900]/10 rounded transition-colors text-sm font-medium flex items-center justify-center"
+                  title="Edit"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(event.id)}
+                  className="px-3 py-2.5 text-red-400 hover:bg-red-500/10 rounded transition-colors text-sm font-medium flex items-center justify-center"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {selectedEventId && (

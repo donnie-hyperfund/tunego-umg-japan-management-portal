@@ -9,7 +9,7 @@ interface PointTransaction {
   transactionType: string;
   source: string;
   description: string | null;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -23,10 +23,6 @@ export default function PointTransactionsView() {
     startDate: "",
     endDate: "",
   });
-
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
 
   const fetchTransactions = async () => {
     try {
@@ -48,6 +44,11 @@ export default function PointTransactionsView() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters({ ...filters, [key]: value });
@@ -83,12 +84,12 @@ export default function PointTransactionsView() {
 
   return (
     <div className="bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl shadow-lg">
-      <div className="p-6 border-b border-[#1A1A1A]">
-        <h3 className="text-xl font-bold text-white">Point Transactions</h3>
+      <div className="p-4 sm:p-6 border-b border-[#1A1A1A]">
+        <h3 className="text-lg sm:text-xl font-bold text-white">Point Transactions</h3>
       </div>
 
-      <div className="p-6 border-b border-[#1A1A1A] bg-[#060606]">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-6">
+      <div className="p-4 sm:p-6 border-b border-[#1A1A1A] bg-[#060606]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6 mb-6">
           <div>
             <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">User ID</label>
             <input
@@ -141,23 +142,24 @@ export default function PointTransactionsView() {
             />
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={applyFilters}
-            className="px-6 py-3 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)] min-w-[120px]"
+            className="px-6 py-3 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)] w-full sm:w-auto sm:min-w-[120px]"
           >
             Apply Filters
           </button>
           <button
             onClick={clearFilters}
-            className="px-6 py-3 bg-[#1A1A1A] text-[#CCCCCC] rounded-lg hover:bg-[#2A2A2A] transition-colors font-medium border border-[#2A2A2A] min-w-[80px]"
+            className="px-6 py-3 bg-[#1A1A1A] text-[#CCCCCC] rounded-lg hover:bg-[#2A2A2A] transition-colors font-medium border border-[#2A2A2A] w-full sm:w-auto sm:min-w-[80px]"
           >
             Clear
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#1A1A1A] bg-[#060606]">
@@ -203,6 +205,60 @@ export default function PointTransactionsView() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4 p-4">
+        {transactions.length === 0 ? (
+          <div className="text-center py-12 text-[#6A6A6A]">
+            No transactions found.
+          </div>
+        ) : (
+          transactions.map((transaction) => (
+            <div
+              key={transaction.id}
+              className="bg-[#060606] border border-[#1A1A1A] rounded-lg p-4 space-y-3"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="font-mono text-xs sm:text-sm text-[#AAAAAA] truncate">{transaction.userId}</p>
+                  <p className="text-[#8A8A8A] text-xs mt-1">
+                    {new Date(transaction.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div
+                  className={`px-3 py-1 rounded-lg font-semibold text-sm shrink-0 ml-2 ${
+                    transaction.transactionType === "earned"
+                      ? "text-green-400 bg-green-400/10"
+                      : transaction.transactionType === "spent"
+                      ? "text-red-400 bg-red-400/10"
+                      : "text-[#FF9900] bg-[#FF9900]/10"
+                  }`}
+                >
+                  {transaction.transactionType === "earned" ? "+" : "-"}
+                  {transaction.points}
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm pt-2 border-t border-[#1A1A1A]">
+                <div className="flex justify-between">
+                  <span className="text-[#8A8A8A]">Type:</span>
+                  <span className="text-[#AAAAAA] capitalize">{transaction.transactionType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#8A8A8A]">Source:</span>
+                  <span className="text-[#AAAAAA]">{transaction.source}</span>
+                </div>
+                {transaction.description && (
+                  <div>
+                    <span className="text-[#8A8A8A] block mb-1">Description:</span>
+                    <span className="text-[#AAAAAA]">{transaction.description}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

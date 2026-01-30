@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/lib/db";
-import { desc, eq, and, gte, lte, like, or } from "drizzle-orm";
+import { desc, eq, and, gte, lte } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +18,6 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
     const limit = parseInt(searchParams.get("limit") || "100");
     const offset = parseInt(searchParams.get("offset") || "0");
-
-    let query = db.select().from(schema.pointTransactions);
 
     const conditions = [];
 
@@ -39,9 +37,10 @@ export async function GET(request: NextRequest) {
       conditions.push(lte(schema.pointTransactions.createdAt, new Date(endDate)));
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
+    const baseQuery = db.select().from(schema.pointTransactions);
+    const query = conditions.length > 0 
+      ? baseQuery.where(and(...conditions))
+      : baseQuery;
 
     const transactions = await query
       .orderBy(desc(schema.pointTransactions.createdAt))
