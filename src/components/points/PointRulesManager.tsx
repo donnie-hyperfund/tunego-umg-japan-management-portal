@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Power, PowerOff, Pencil, Trash2 } from "lucide-react";
 
 interface PointRule {
   id: string;
@@ -121,13 +122,18 @@ export default function PointRulesManager() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return (
+      <div className="text-center py-12">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A0FF]"></div>
+        <p className="mt-4 text-[#AAAAAA]">Loading rules...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold">Point Rules</h3>
+    <div className="bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl shadow-lg">
+      <div className="flex justify-between items-center p-6 border-b border-[#1A1A1A]">
+        <h3 className="text-xl font-bold text-white">Point Rules</h3>
         <button
           onClick={() => {
             setShowForm(true);
@@ -140,64 +146,69 @@ export default function PointRulesManager() {
               isActive: true,
             });
           }}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-5 py-2.5 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors text-sm font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)]"
         >
-          Add New Rule
+          + Add New Rule
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 border rounded">
-          <div className="grid grid-cols-2 gap-4 mb-4">
+        <form onSubmit={handleSubmit} className="p-6 border-b border-[#1A1A1A] bg-[#060606]">
+          <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Name</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Source</label>
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Source</label>
               <input
                 type="text"
                 value={formData.source}
                 onChange={(e) =>
                   setFormData({ ...formData, source: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Points</label>
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Points</label>
               <input
                 type="number"
                 value={formData.points}
                 onChange={(e) =>
                   setFormData({ ...formData, points: parseInt(e.target.value) })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Active</label>
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) =>
-                  setFormData({ ...formData, isActive: e.target.checked })
-                }
-                className="mt-2"
-              />
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Active</label>
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) =>
+                    setFormData({ ...formData, isActive: e.target.checked })
+                  }
+                  className="w-5 h-5 rounded border-[#1A1A1A] bg-[#0F0F0F] text-[#00A0FF] focus:ring-[#00A0FF] focus:ring-2"
+                />
+                <span className="ml-2 text-[#AAAAAA] text-sm">
+                  {formData.isActive ? "Active" : "Inactive"}
+                </span>
+              </div>
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">
                 Description
               </label>
               <textarea
@@ -205,17 +216,17 @@ export default function PointRulesManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors resize-none"
                 rows={3}
               />
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3 mt-6">
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              className="px-5 py-2.5 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors text-sm font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)]"
             >
-              {editingRule ? "Update" : "Create"}
+              {editingRule ? "Update Rule" : "Create Rule"}
             </button>
             <button
               type="button"
@@ -223,7 +234,7 @@ export default function PointRulesManager() {
                 setShowForm(false);
                 setEditingRule(null);
               }}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              className="px-5 py-2.5 bg-[#1A1A1A] text-[#CCCCCC] rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm font-medium border border-[#2A2A2A]"
             >
               Cancel
             </button>
@@ -234,57 +245,64 @@ export default function PointRulesManager() {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b">
-              <th className="text-left p-2">Name</th>
-              <th className="text-left p-2">Source</th>
-              <th className="text-left p-2">Points</th>
-              <th className="text-left p-2">Status</th>
-              <th className="text-left p-2">Actions</th>
+            <tr className="border-b border-[#1A1A1A] bg-[#060606]">
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Name</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Source</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Points</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Status</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rules.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center p-4 text-gray-500">
+                <td colSpan={5} className="text-center px-6 py-12 text-[#6A6A6A]">
                   No rules found. Create one to get started.
                 </td>
               </tr>
             ) : (
               rules.map((rule) => (
-                <tr key={rule.id} className="border-b">
-                  <td className="p-2">{rule.name}</td>
-                  <td className="p-2">{rule.source}</td>
-                  <td className="p-2">{rule.points}</td>
-                  <td className="p-2">
+                <tr key={rule.id} className="border-b border-[#1A1A1A] hover:bg-[#0A0A0A] transition-colors">
+                  <td className="px-6 py-4 text-white font-medium">{rule.name}</td>
+                  <td className="px-6 py-4 text-[#AAAAAA]">{rule.source}</td>
+                  <td className="px-6 py-4 text-[#00A0FF] font-semibold">{rule.points}</td>
+                  <td className="px-6 py-4">
                     <span
-                      className={`px-2 py-1 rounded text-sm ${
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
                         rule.isActive
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                          ? "bg-[#00A0FF]/20 text-[#00A0FF] border border-[#00A0FF]/30"
+                          : "bg-[#3A3A3A] text-[#8A8A8A] border border-[#2A2A2A]"
                       }`}
                     >
                       {rule.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="p-2">
-                    <div className="flex gap-2">
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2 items-center">
                       <button
                         onClick={() => toggleActive(rule)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="p-2 text-[#00A0FF] hover:text-[#0088DD] hover:bg-[#00A0FF]/10 rounded transition-colors"
+                        title={rule.isActive ? "Deactivate" : "Activate"}
                       >
-                        {rule.isActive ? "Deactivate" : "Activate"}
+                        {rule.isActive ? (
+                          <PowerOff className="w-4 h-4" />
+                        ) : (
+                          <Power className="w-4 h-4" />
+                        )}
                       </button>
                       <button
                         onClick={() => handleEdit(rule)}
-                        className="text-yellow-600 hover:text-yellow-800"
+                        className="p-2 text-[#FF9900] hover:text-[#FF8800] hover:bg-[#FF9900]/10 rounded transition-colors"
+                        title="Edit"
                       >
-                        Edit
+                        <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(rule.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                        title="Delete"
                       >
-                        Delete
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>

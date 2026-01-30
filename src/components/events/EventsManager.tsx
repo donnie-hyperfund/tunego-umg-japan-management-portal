@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { Eye, EyeOff, Power, PowerOff, Pencil, Trash2 } from "lucide-react";
 import EventCheckInsView from "./EventCheckInsView";
 
 // Dynamically import MapPicker to avoid SSR issues with Leaflet
@@ -173,13 +174,18 @@ export default function EventsManager() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return (
+      <div className="text-center py-12">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A0FF]"></div>
+        <p className="mt-4 text-[#AAAAAA]">Loading events...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold">Events</h3>
+    <div className="bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl shadow-lg">
+      <div className="flex justify-between items-center p-6 border-b border-[#1A1A1A]">
+        <h3 className="text-xl font-bold text-white">Events</h3>
         <button
           onClick={() => {
             setShowForm(true);
@@ -198,59 +204,59 @@ export default function EventsManager() {
               isActive: true,
             });
           }}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-5 py-2.5 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors text-sm font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)]"
         >
-          Add New Event
+          + Add New Event
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 border rounded">
-          <div className="grid grid-cols-2 gap-4 mb-4">
+        <form onSubmit={handleSubmit} className="p-6 border-b border-[#1A1A1A] bg-[#060606]">
+          <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Name</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Location</label>
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Location</label>
               <input
                 type="text"
                 value={formData.location}
                 onChange={(e) =>
                   setFormData({ ...formData, location: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Start Date</label>
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Start Date</label>
               <input
                 type="datetime-local"
                 value={formData.startDate}
                 onChange={(e) =>
                   setFormData({ ...formData, startDate: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">End Date</label>
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">End Date</label>
               <input
                 type="datetime-local"
                 value={formData.endDate}
                 onChange={(e) =>
                   setFormData({ ...formData, endDate: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors"
                 required
               />
             </div>
@@ -304,18 +310,23 @@ export default function EventsManager() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Active</label>
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) =>
-                  setFormData({ ...formData, isActive: e.target.checked })
-                }
-                className="mt-2"
-              />
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">Active</label>
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) =>
+                    setFormData({ ...formData, isActive: e.target.checked })
+                  }
+                  className="w-5 h-5 rounded border-[#1A1A1A] bg-[#0F0F0F] text-[#00A0FF] focus:ring-[#00A0FF] focus:ring-2"
+                />
+                <span className="ml-2 text-[#AAAAAA] text-sm">
+                  {formData.isActive ? "Active" : "Inactive"}
+                </span>
+              </div>
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-2 text-[#CCCCCC]">
                 Description
               </label>
               <textarea
@@ -323,17 +334,17 @@ export default function EventsManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                className="w-full px-4 py-2.5 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#6A6A6A] focus:border-[#00A0FF] focus:outline-none focus:ring-1 focus:ring-[#00A0FF] transition-colors resize-none"
                 rows={3}
               />
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3 mt-6">
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              className="px-5 py-2.5 bg-[#00A0FF] text-white rounded-lg hover:bg-[#0088DD] transition-colors text-sm font-medium shadow-[0_0_10px_rgba(0,160,255,0.3)]"
             >
-              {editingEvent ? "Update" : "Create"}
+              {editingEvent ? "Update Event" : "Create Event"}
             </button>
             <button
               type="button"
@@ -341,7 +352,7 @@ export default function EventsManager() {
                 setShowForm(false);
                 setEditingEvent(null);
               }}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              className="px-5 py-2.5 bg-[#1A1A1A] text-[#CCCCCC] rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm font-medium border border-[#2A2A2A]"
             >
               Cancel
             </button>
@@ -352,35 +363,35 @@ export default function EventsManager() {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b">
-              <th className="text-left p-2">Name</th>
-              <th className="text-left p-2">Location</th>
-              <th className="text-left p-2">Start Date</th>
-              <th className="text-left p-2">End Date</th>
-              <th className="text-left p-2">Geofence</th>
-              <th className="text-left p-2">Status</th>
-              <th className="text-left p-2">Actions</th>
+            <tr className="border-b border-[#1A1A1A] bg-[#060606]">
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Name</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Location</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Start Date</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">End Date</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Geofence</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Status</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-[#CCCCCC] uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody>
             {events.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center p-4 text-gray-500">
+                <td colSpan={7} className="text-center px-6 py-12 text-[#6A6A6A]">
                   No events found. Create one to get started.
                 </td>
               </tr>
             ) : (
               events.map((event) => (
-                <tr key={event.id} className="border-b">
-                  <td className="p-2">{event.name}</td>
-                  <td className="p-2">{event.location || "-"}</td>
-                  <td className="p-2 text-sm">
+                <tr key={event.id} className="border-b border-[#1A1A1A] hover:bg-[#0A0A0A] transition-colors">
+                  <td className="px-6 py-4 text-white font-medium">{event.name}</td>
+                  <td className="px-6 py-4 text-[#AAAAAA]">{event.location || "-"}</td>
+                  <td className="px-6 py-4 text-sm text-[#AAAAAA]">
                     {new Date(event.startDate).toLocaleString()}
                   </td>
-                  <td className="p-2 text-sm">
+                  <td className="px-6 py-4 text-sm text-[#AAAAAA]">
                     {new Date(event.endDate).toLocaleString()}
                   </td>
-                  <td className="p-2 text-sm">
+                  <td className="px-6 py-4 text-sm text-[#AAAAAA]">
                     {event.geofenceType === "polygon" && event.geofencePolygon
                       ? `Polygon (${event.geofencePolygon.length} points)`
                       : event.geofenceType === "circle" &&
@@ -391,46 +402,58 @@ export default function EventsManager() {
                         }`
                       : "-"}
                   </td>
-                  <td className="p-2">
+                  <td className="px-6 py-4">
                     <span
-                      className={`px-2 py-1 rounded text-sm ${
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
                         event.isActive
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                          ? "bg-[#00A0FF]/20 text-[#00A0FF] border border-[#00A0FF]/30"
+                          : "bg-[#3A3A3A] text-[#8A8A8A] border border-[#2A2A2A]"
                       }`}
                     >
                       {event.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="p-2">
-                    <div className="flex gap-2">
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2 items-center">
                       <button
                         onClick={() =>
                           setSelectedEventId(
                             selectedEventId === event.id ? null : event.id
                           )
                         }
-                        className="text-blue-600 hover:text-blue-800"
+                        className="p-2 text-[#00A0FF] hover:text-[#0088DD] hover:bg-[#00A0FF]/10 rounded transition-colors"
+                        title={selectedEventId === event.id ? "Hide Check-ins" : "View Check-ins"}
                       >
-                        {selectedEventId === event.id ? "Hide" : "View"} Check-ins
+                        {selectedEventId === event.id ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                       <button
                         onClick={() => toggleActive(event)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="p-2 text-[#00A0FF] hover:text-[#0088DD] hover:bg-[#00A0FF]/10 rounded transition-colors"
+                        title={event.isActive ? "Deactivate" : "Activate"}
                       >
-                        {event.isActive ? "Deactivate" : "Activate"}
+                        {event.isActive ? (
+                          <PowerOff className="w-4 h-4" />
+                        ) : (
+                          <Power className="w-4 h-4" />
+                        )}
                       </button>
                       <button
                         onClick={() => handleEdit(event)}
-                        className="text-yellow-600 hover:text-yellow-800"
+                        className="p-2 text-[#FF9900] hover:text-[#FF8800] hover:bg-[#FF9900]/10 rounded transition-colors"
+                        title="Edit"
                       >
-                        Edit
+                        <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(event.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                        title="Delete"
                       >
-                        Delete
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
