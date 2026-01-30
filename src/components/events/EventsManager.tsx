@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Eye, EyeOff, Power, PowerOff, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Power, PowerOff, Pencil, Trash2, MapPin } from "lucide-react";
 import EventCheckInsView from "./EventCheckInsView";
 
 // Dynamically import MapPicker to avoid SSR issues with Leaflet
@@ -11,6 +11,16 @@ const MapPicker = dynamic(() => import("./MapPicker"), {
   loading: () => (
     <div className="w-full h-96 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
       <p className="text-gray-500">Loading map...</p>
+    </div>
+  ),
+});
+
+// Dynamically import GeofencePreview to avoid SSR issues with Leaflet
+const GeofencePreview = dynamic(() => import("./GeofencePreview"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-48 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg flex items-center justify-center">
+      <p className="text-[#AAAAAA] text-sm">Loading map...</p>
     </div>
   ),
 });
@@ -39,6 +49,7 @@ export default function EventsManager() {
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -462,15 +473,54 @@ export default function EventsManager() {
                     {new Date(event.endDate).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 text-sm text-[#AAAAAA]">
-                    {event.geofenceType === "polygon" && event.geofencePolygon
-                      ? `Polygon (${event.geofencePolygon.length} points)`
-                      : event.geofenceType === "circle" &&
+                    <div className="flex items-center gap-2">
+                      <span>
+                        {event.geofenceType === "polygon" && event.geofencePolygon
+                          ? `Polygon (${event.geofencePolygon.length} points)`
+                          : event.geofenceType === "circle" &&
+                            event.geofenceLatitude &&
+                            event.geofenceLongitude
+                          ? `Circle: ${event.geofenceLatitude}, ${event.geofenceLongitude}${
+                              event.geofenceRadius ? ` (${event.geofenceRadius}m)` : ""
+                            }`
+                          : "-"}
+                      </span>
+                      {(event.geofenceType === "polygon" && event.geofencePolygon) ||
+                      (event.geofenceType === "circle" &&
                         event.geofenceLatitude &&
-                        event.geofenceLongitude
-                      ? `Circle: ${event.geofenceLatitude}, ${event.geofenceLongitude}${
-                          event.geofenceRadius ? ` (${event.geofenceRadius}m)` : ""
-                        }`
-                      : "-"}
+                        event.geofenceLongitude) ? (
+                        <button
+                          onClick={() =>
+                            setPreviewEventId(
+                              previewEventId === event.id ? null : event.id
+                            )
+                          }
+                          className="p-1.5 text-[#00A0FF] hover:text-[#0088DD] hover:bg-[#00A0FF]/10 rounded transition-colors"
+                          title="Preview geofence on map"
+                        >
+                          <MapPin className="w-4 h-4" />
+                        </button>
+                      ) : null}
+                    </div>
+                    {previewEventId === event.id && (
+                      <div className="mt-3">
+                        <GeofencePreview
+                          geofenceType={event.geofenceType}
+                          latitude={
+                            event.geofenceLatitude
+                              ? parseFloat(event.geofenceLatitude)
+                              : null
+                          }
+                          longitude={
+                            event.geofenceLongitude
+                              ? parseFloat(event.geofenceLongitude)
+                              : null
+                          }
+                          radius={event.geofenceRadius}
+                          polygon={event.geofencePolygon}
+                        />
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <span
