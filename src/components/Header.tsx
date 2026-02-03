@@ -57,6 +57,16 @@ export default function Header() {
             >
               Events
             </Link>
+            <Link
+              href="/sites"
+              className={`text-sm font-medium transition-colors ${
+                pathname?.startsWith("/sites")
+                  ? "text-[#00A0FF]"
+                  : "text-[#8A8A8A] hover:text-[#00A0FF]"
+              }`}
+            >
+              Sites
+            </Link>
             <div className="flex items-center">
               <UserButton
                 appearance={{
@@ -126,6 +136,17 @@ export default function Header() {
                 }`}
               >
                 Events
+              </Link>
+              <Link
+                href="/sites"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`text-base font-medium transition-colors py-2 ${
+                  pathname?.startsWith("/sites")
+                    ? "text-[#00A0FF]"
+                    : "text-[#8A8A8A] hover:text-[#00A0FF]"
+                }`}
+              >
+                Sites
               </Link>
             </div>
           </nav>

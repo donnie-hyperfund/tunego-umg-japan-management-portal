@@ -1,0 +1,50 @@
+{
+  "id": "collectible-campaign",
+  "name": "Collectible Campaign",
+  "description": "Campaign site with hero section, rich content, 3D collectible cards, and email signup form. Based on King & Prince reference.",
+  "version": "1.0.0",
+  "sections": [
+    {
+      "id": "hero",
+      "name": "Hero Section",
+      "required": true,
+      "contentTypes": ["hero"]
+    },
+    {
+      "id": "description",
+      "name": "Description",
+      "required": false,
+      "contentTypes": ["richText", "text"]
+    },
+    {
+      "id": "cards",
+      "name": "3D Cards",
+      "required": false,
+      "contentTypes": ["cardManifest"]
+    },
+    {
+      "id": "signup",
+      "name": "Email Signup",
+      "required": false,
+      "contentTypes": ["signup"]
+    }
+  ],
+  "features": {
+    "videoBackground": true,
+    "imageBackground": true,
+    "cardShowcase": true,
+    "emailSignup": true,
+    "responsive": true
+  },
+  "customization": {
+    "colors": {
+      "primary": "#00A0FF",
+      "background": "#000000",
+      "text": "#FFFFFF"
+    },
+    "fonts": {
+      "heading": "Avenir Next",
+      "body": "Avenir Next"
+    }
+  }
+}

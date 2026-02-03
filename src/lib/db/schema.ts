@@ -100,6 +100,85 @@ export const userCards = pgTable('user_cards', {
   cardIdIdx: index('user_cards_card_id_idx').on(table.cardId),
 }));
 
+// Campaign Sites Tables
+export const siteTemplates = pgTable('site_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  templatePath: text('template_path').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const campaignSites = pgTable('campaign_sites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  slug: text('slug').notNull().unique(),
+  status: text('status').notNull().default('draft'), // 'draft', 'published', 'archived'
+  templateId: uuid('template_id').references(() => siteTemplates.id),
+  vercelProjectId: text('vercel_project_id'),
+  vercelDeploymentUrl: text('vercel_deployment_url'),
+  createdBy: uuid('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  vercelDeploymentId: text('vercel_deployment_id'), // Track specific deployment
+  deploymentStatus: text('deployment_status'), // 'building', 'ready', 'error', 'canceled'
+  lastDeployedAt: timestamp('last_deployed_at'),
+  // Clerk/Authentication Configuration
+  enableUserManagement: boolean('enable_user_management').notNull().default(true), // Whether site includes user authentication
+  clerkPublishableKey: text('clerk_publishable_key'), // Site-specific Clerk publishable key (optional, falls back to global)
+  clerkSecretKey: text('clerk_secret_key'), // Site-specific Clerk secret key (optional, falls back to global)
+}, (table) => ({
+  slugIdx: index('campaign_sites_slug_idx').on(table.slug),
+  statusIdx: index('campaign_sites_status_idx').on(table.status),
+  createdByIdx: index('campaign_sites_created_by_idx').on(table.createdBy),
+}));
+
+export const campaignSiteContent = pgTable('campaign_site_content', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  siteId: uuid('site_id').notNull().references(() => campaignSites.id, { onDelete: 'cascade' }),
+  section: text('section').notNull(), // 'hero', 'description', 'cards', 'signup'
+  contentType: text('content_type').notNull(), // 'text', 'richText', 'image', 'video', 'cardManifest'
+  content: jsonb('content').notNull(),
+  order: integer('order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  siteIdIdx: index('campaign_site_content_site_id_idx').on(table.siteId),
+  sectionIdx: index('campaign_site_content_section_idx').on(table.section),
+}));
+
+export const campaignAssets = pgTable('campaign_assets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  siteId: uuid('site_id').notNull().references(() => campaignSites.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'image', 'video', 'audio', 'document'
+  url: text('url').notNull(),
+  filename: text('filename').notNull(),
+  mimeType: text('mime_type'),
+  size: integer('size'),
+  uploadedBy: uuid('uploaded_by').references(() => users.id),
+  uploadedAt: timestamp('uploaded_at').notNull().defaultNow(),
+}, (table) => ({
+  siteIdIdx: index('campaign_assets_site_id_idx').on(table.siteId),
+  typeIdx: index('campaign_assets_type_idx').on(table.type),
+}));
+
+export const cardManifests = pgTable('card_manifests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  siteId: uuid('site_id').notNull().references(() => campaignSites.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  manifest: jsonb('manifest').notNull(),
+  cardImageUrl: text('card_image_url'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  siteIdIdx: index('card_manifests_site_id_idx').on(table.siteId),
+}));
+
 // Export types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -115,3 +194,13 @@ export type Card = typeof cards.$inferSelect;
 export type NewCard = typeof cards.$inferInsert;
 export type UserCard = typeof userCards.$inferSelect;
 export type NewUserCard = typeof userCards.$inferInsert;
+export type SiteTemplate = typeof siteTemplates.$inferSelect;
+export type NewSiteTemplate = typeof siteTemplates.$inferInsert;
+export type CampaignSite = typeof campaignSites.$inferSelect;
+export type NewCampaignSite = typeof campaignSites.$inferInsert;
+export type CampaignSiteContent = typeof campaignSiteContent.$inferSelect;
+export type NewCampaignSiteContent = typeof campaignSiteContent.$inferInsert;
+export type CampaignAsset = typeof campaignAssets.$inferSelect;
+export type NewCampaignAsset = typeof campaignAssets.$inferInsert;
+export type CardManifest = typeof cardManifests.$inferSelect;
+export type NewCardManifest = typeof cardManifests.$inferInsert;
