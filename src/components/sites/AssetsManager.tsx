@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, Image as ImageIcon, Video, File, Trash2, Loader2, X, CheckSquare, Square } from "lucide-react";
 import MediaPreview from "./MediaPreview";
+import { put } from "@vercel/blob/client";
 
 interface Asset {
   id: string;
@@ -68,106 +69,99 @@ export default function AssetsManager({ siteId }: AssetsManagerProps) {
       });
       setUploadingFiles((prev) => new Map([...prev, ...newUploads]));
 
-      // Upload each file independently
-      acceptedFiles.forEach(async (file) => {
+      // Upload each file independently using upload-token flow (bypasses Next.js body size limits)
+      for (const file of acceptedFiles) {
         const uploadId = Array.from(newUploads.keys()).find(
           (id) => newUploads.get(id)?.file === file
         )!;
 
         try {
-          const formData = new FormData();
-          formData.append("file", file);
-
-          // Use XMLHttpRequest for progress tracking
-          const xhr = new XMLHttpRequest();
-
-          // Track upload progress
-          xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable) {
-              const progress = Math.round((e.loaded / e.total) * 100);
-              setUploadingFiles((prev) => {
-                const updated = new Map(prev);
-                const current = updated.get(uploadId);
-                if (current) {
-                  updated.set(uploadId, { ...current, progress });
-                }
-                return updated;
-              });
+          // Step 1: Get upload token
+          setUploadingFiles((prev) => {
+            const updated = new Map(prev);
+            const current = updated.get(uploadId);
+            if (current) {
+              updated.set(uploadId, { ...current, progress: 10 });
             }
+            return updated;
           });
 
-          // Handle completion
-          xhr.addEventListener("load", () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const newAsset = JSON.parse(xhr.responseText);
-                setAssets((prev) => [...prev, newAsset]);
-                setUploadingFiles((prev) => {
-                  const updated = new Map(prev);
-                  const current = updated.get(uploadId);
-                  if (current) {
-                    updated.set(uploadId, { ...current, progress: 100, status: "success" });
-                  }
-                  return updated;
-                });
-
-                // Remove from uploading list after a delay
-                setTimeout(() => {
-                  setUploadingFiles((prev) => {
-                    const updated = new Map(prev);
-                    updated.delete(uploadId);
-                    return updated;
-                  });
-                }, 2000);
-              } catch (error) {
-                console.error("Error parsing response:", error);
-                setUploadingFiles((prev) => {
-                  const updated = new Map(prev);
-                  const current = updated.get(uploadId);
-                  if (current) {
-                    updated.set(uploadId, {
-                      ...current,
-                      status: "error",
-                      error: "Failed to parse server response",
-                    });
-                  }
-                  return updated;
-                });
-              }
-            } else {
-              setUploadingFiles((prev) => {
-                const updated = new Map(prev);
-                const current = updated.get(uploadId);
-                if (current) {
-                  updated.set(uploadId, {
-                    ...current,
-                    status: "error",
-                    error: `Upload failed: ${xhr.statusText}`,
-                  });
-                }
-                return updated;
-              });
-            }
+          const tokenResponse = await fetch(`/api/sites/${siteId}/assets/upload-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: file.name,
+              contentType: file.type,
+            }),
           });
 
-          // Handle errors
-          xhr.addEventListener("error", () => {
+          if (!tokenResponse.ok) {
+            const errorData = await tokenResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to get upload token: ${tokenResponse.status}`);
+          }
+
+          const { token } = await tokenResponse.json();
+
+          // Step 2: Upload directly to Vercel Blob using the client SDK (bypasses Next.js)
+          setUploadingFiles((prev) => {
+            const updated = new Map(prev);
+            const current = updated.get(uploadId);
+            if (current) {
+              updated.set(uploadId, { ...current, progress: 50 });
+            }
+            return updated;
+          });
+
+          // Upload directly to Vercel Blob - this bypasses Next.js body parsing entirely
+          const blob = await put(`sites/${siteId}/${file.name}`, file, {
+            access: 'public',
+            token: token,
+          });
+
+          // Step 3: Save to database via our API
+          setUploadingFiles((prev) => {
+            const updated = new Map(prev);
+            const current = updated.get(uploadId);
+            if (current) {
+              updated.set(uploadId, { ...current, progress: 90 });
+            }
+            return updated;
+          });
+
+          const saveResponse = await fetch(`/api/sites/${siteId}/assets/upload-complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: blob.url,
+              filename: file.name,
+              contentType: file.type,
+            }),
+          });
+
+          if (!saveResponse.ok) {
+            const errorData = await saveResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to save asset: ${saveResponse.status}`);
+          }
+
+          const newAsset = await saveResponse.json();
+          setAssets((prev) => [...prev, newAsset]);
+          setUploadingFiles((prev) => {
+            const updated = new Map(prev);
+            const current = updated.get(uploadId);
+            if (current) {
+              updated.set(uploadId, { ...current, progress: 100, status: "success" });
+            }
+            return updated;
+          });
+
+          // Remove from uploading list after a delay
+          setTimeout(() => {
             setUploadingFiles((prev) => {
               const updated = new Map(prev);
-              const current = updated.get(uploadId);
-              if (current) {
-                updated.set(uploadId, {
-                  ...current,
-                  status: "error",
-                  error: "Network error occurred",
-                });
-              }
+              updated.delete(uploadId);
               return updated;
             });
-          });
-
-          xhr.open("POST", `/api/sites/${siteId}/assets`);
-          xhr.send(formData);
+          }, 2000);
         } catch (error) {
           console.error("Error uploading file:", error);
           setUploadingFiles((prev) => {
@@ -183,7 +177,7 @@ export default function AssetsManager({ siteId }: AssetsManagerProps) {
             return updated;
           });
         }
-      });
+      }
     },
     [siteId]
   );

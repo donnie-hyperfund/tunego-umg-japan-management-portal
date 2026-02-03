@@ -245,6 +245,14 @@ export default buildConfig({
           type: 'text',
         },
         {
+          name: 'frontImageUrl',
+          type: 'text',
+        },
+        {
+          name: 'backImageUrl',
+          type: 'text',
+        },
+        {
           name: 'isActive',
           type: 'checkbox',
           defaultValue: true,

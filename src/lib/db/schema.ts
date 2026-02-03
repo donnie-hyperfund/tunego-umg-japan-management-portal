@@ -171,7 +171,9 @@ export const cardManifests = pgTable('card_manifests', {
   siteId: uuid('site_id').notNull().references(() => campaignSites.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   manifest: jsonb('manifest').notNull(),
-  cardImageUrl: text('card_image_url'),
+  cardImageUrl: text('card_image_url'), // Legacy/preview field
+  frontImageUrl: text('front_image_url'), // Front face asset URL
+  backImageUrl: text('back_image_url'), // Back face asset URL
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

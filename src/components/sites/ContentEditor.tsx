@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, GripVertical, Eye, EyeOff, Trash2, Loader2 } from "lucide-react";
+import { Plus, GripVertical, Eye, EyeOff, Trash2, Loader2, Image as ImageIcon } from "lucide-react";
 import RichTextEditor from "./RichTextEditor";
 import HeroEditor from "./HeroEditor";
 import MediaPreview from "./MediaPreview";
+import AssetPicker from "./AssetPicker";
 
 interface SiteContent {
   id: string;
@@ -26,6 +27,17 @@ export default function ContentEditor({ siteId }: ContentEditorProps) {
   const [newSection, setNewSection] = useState({
     section: "hero",
     contentType: "hero",
+  });
+  const [assetPickerState, setAssetPickerState] = useState<{
+    isOpen: boolean;
+    contentId: string | null;
+    field: "url" | "cardImageUrl" | null;
+    filterType: "image" | "video" | "all";
+  }>({
+    isOpen: false,
+    contentId: null,
+    field: null,
+    filterType: "all",
   });
 
   useEffect(() => {
@@ -149,6 +161,7 @@ export default function ContentEditor({ siteId }: ContentEditorProps) {
     if (item.section === "hero" && (item.contentType === "hero" || item.contentType === "text")) {
       return (
         <HeroEditor
+          siteId={siteId}
           content={item.content || {}}
           onChange={(newContent) =>
             handleUpdateContent(item.id, { content: newContent })
@@ -187,17 +200,34 @@ export default function ContentEditor({ siteId }: ContentEditorProps) {
               <label className="block text-sm font-medium text-[#CCCCCC] mb-2">
                 Image URL
               </label>
-              <input
-                type="url"
-                value={item.content?.url || ""}
-                onChange={(e) =>
-                  handleUpdateContent(item.id, {
-                    content: { ...item.content, url: e.target.value },
-                  })
-                }
-                className="w-full px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
-                placeholder="https://example.com/image.jpg"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={item.content?.url || ""}
+                  onChange={(e) =>
+                    handleUpdateContent(item.id, {
+                      content: { ...item.content, url: e.target.value },
+                    })
+                  }
+                  className="flex-1 px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
+                  placeholder="https://example.com/image.jpg"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAssetPickerState({
+                      isOpen: true,
+                      contentId: item.id,
+                      field: "url",
+                      filterType: "image",
+                    })
+                  }
+                  className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-[#1A1A1A] rounded-lg text-[#CCCCCC] hover:text-white transition-colors flex items-center gap-2"
+                  title="Browse assets"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-[#CCCCCC] mb-2">
@@ -227,17 +257,34 @@ export default function ContentEditor({ siteId }: ContentEditorProps) {
               <label className="block text-sm font-medium text-[#CCCCCC] mb-2">
                 Video URL
               </label>
-              <input
-                type="url"
-                value={item.content?.url || ""}
-                onChange={(e) =>
-                  handleUpdateContent(item.id, {
-                    content: { ...item.content, url: e.target.value },
-                  })
-                }
-                className="w-full px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
-                placeholder="https://example.com/video.mp4"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={item.content?.url || ""}
+                  onChange={(e) =>
+                    handleUpdateContent(item.id, {
+                      content: { ...item.content, url: e.target.value },
+                    })
+                  }
+                  className="flex-1 px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
+                  placeholder="https://example.com/video.mp4"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAssetPickerState({
+                      isOpen: true,
+                      contentId: item.id,
+                      field: "url",
+                      filterType: "video",
+                    })
+                  }
+                  className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-[#1A1A1A] rounded-lg text-[#CCCCCC] hover:text-white transition-colors flex items-center gap-2"
+                  title="Browse assets"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2">
@@ -279,17 +326,34 @@ export default function ContentEditor({ siteId }: ContentEditorProps) {
               <label className="block text-sm font-medium text-[#CCCCCC] mb-2">
                 Card Image URL
               </label>
-              <input
-                type="url"
-                value={item.content?.cardImageUrl || ""}
-                onChange={(e) =>
-                  handleUpdateContent(item.id, {
-                    content: { ...item.content, cardImageUrl: e.target.value },
-                  })
-                }
-                className="w-full px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
-                placeholder="https://example.com/card-image.jpg"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={item.content?.cardImageUrl || ""}
+                  onChange={(e) =>
+                    handleUpdateContent(item.id, {
+                      content: { ...item.content, cardImageUrl: e.target.value },
+                    })
+                  }
+                  className="flex-1 px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
+                  placeholder="https://example.com/card-image.jpg"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAssetPickerState({
+                      isOpen: true,
+                      contentId: item.id,
+                      field: "cardImageUrl",
+                      filterType: "image",
+                    })
+                  }
+                  className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-[#1A1A1A] rounded-lg text-[#CCCCCC] hover:text-white transition-colors flex items-center gap-2"
+                  title="Browse assets"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+              </div>
               <p className="mt-2 text-xs text-[#8A8A8A]">
                 URL to the card preview image (recommended: 800x1200px portrait)
               </p>
@@ -500,6 +564,48 @@ export default function ContentEditor({ siteId }: ContentEditorProps) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Asset Picker Modal */}
+      {assetPickerState.isOpen && assetPickerState.contentId && assetPickerState.field && (
+        <AssetPicker
+          siteId={siteId}
+          isOpen={assetPickerState.isOpen}
+          onClose={() =>
+            setAssetPickerState({
+              isOpen: false,
+              contentId: null,
+              field: null,
+              filterType: "all",
+            })
+          }
+          onSelect={(url) => {
+            const contentItem = content.find((c) => c.id === assetPickerState.contentId);
+            if (contentItem && assetPickerState.field) {
+              const updates: any = {};
+              if (assetPickerState.field === "cardImageUrl") {
+                updates.content = {
+                  ...contentItem.content,
+                  cardImageUrl: url,
+                };
+              } else {
+                updates.content = {
+                  ...contentItem.content,
+                  url: url,
+                };
+              }
+              handleUpdateContent(assetPickerState.contentId!, updates);
+            }
+            setAssetPickerState({
+              isOpen: false,
+              contentId: null,
+              field: null,
+              filterType: "all",
+            });
+          }}
+          filterType={assetPickerState.filterType}
+          title={`Select ${assetPickerState.filterType === "image" ? "Image" : "Video"}`}
+        />
       )}
     </div>
   );

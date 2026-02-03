@@ -98,7 +98,27 @@ async function generateCollectibleCampaignProject(
   }
   
   const descriptionContent = contentBySection.description || [];
-  const cardContent = contentBySection.cards || [];
+  // Use cardManifests from database, not contentBySection.cards
+  // Filter to only active cards and get the first one
+  const activeCards = cards.filter((card: any) => card.isActive);
+  const cardContent = activeCards.length > 0 ? (() => {
+    const activeCard = activeCards[0];
+    // Derive media types from URLs
+    const frontMediaType = activeCard.frontImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image";
+    const backMediaType = activeCard.backImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image";
+    
+    return [{
+      id: activeCard.id,
+      content: {
+        cardImageUrl: activeCard.cardImageUrl || activeCard.frontImageUrl,
+        frontImageUrl: activeCard.frontImageUrl,
+        backImageUrl: activeCard.backImageUrl,
+        frontMediaType: frontMediaType,
+        backMediaType: backMediaType,
+        flipEnabled: activeCard.manifest?.interactions?.flipEnabled !== false,
+      }
+    }];
+  })() : [];
   const signupContent = contentBySection.signup?.[0]?.content || {};
 
   // Generate package.json (conditionally include Clerk dependencies)
@@ -124,7 +144,12 @@ async function generateCollectibleCampaignProject(
       start: 'next start',
       lint: 'next lint',
     },
-    dependencies,
+    dependencies: {
+      ...dependencies,
+      // Tailwind v4 needs these in dependencies for PostCSS processing
+      'tailwindcss': '^4',
+      '@tailwindcss/postcss': '^4',
+    },
     devDependencies: {
       '@types/node': '^20',
       '@types/react': '^19',
@@ -132,8 +157,6 @@ async function generateCollectibleCampaignProject(
       'eslint': '^9',
       'eslint-config-next': '15.5.4',
       'typescript': '^5',
-      'tailwindcss': '^4',
-      '@tailwindcss/postcss': '^4',
     },
   };
 
@@ -258,6 +281,17 @@ body {
     exclude: ['node_modules'],
   };
 
+  // Generate postcss.config.mjs
+  // Using object format for plugins to ensure compatibility with Next.js 15
+  const postcssConfig = `const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+`;
+
   // Generate .gitignore
   const gitignore = `# dependencies
 /node_modules
@@ -314,6 +348,7 @@ CLERK_SECRET_KEY=sk_test_your_secret_key_here
   const files: Record<string, string> = {
     'package.json': JSON.stringify(packageJson, null, 2),
     'next.config.ts': nextConfig,
+    'postcss.config.mjs': postcssConfig,
     'vercel.json': JSON.stringify(vercelJson, null, 2),
     'tsconfig.json': JSON.stringify(tsconfigJson, null, 2),
     '.gitignore': gitignore,
@@ -337,116 +372,358 @@ function generatePageComponent(
   cardContent: any[],
   signupContent: any
 ): string {
-  const descriptionHtml = descriptionContent
-    .map(desc => {
+  // Helper function to safely stringify values for JSX
+  const jsxValue = (value: any): string => {
+    if (value === null || value === undefined) return 'null';
+    return JSON.stringify(value);
+  };
+
+  // Generate description content rendering
+  const descriptionRendering = descriptionContent
+    .map((desc, index) => {
+      const key = desc.id || `desc-${index}`;
       if (desc.contentType === 'richText' && desc.content?.html) {
-        return desc.content.html;
+        return `            <div
+              key={${jsxValue(key)}}
+              className="text-white text-sm xl:text-base mb-4"
+              dangerouslySetInnerHTML={{ __html: ${jsxValue(desc.content.html)} }}
+            />`;
       } else if (desc.contentType === 'text' && desc.content?.text) {
-        return `<p>${desc.content.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
+        return `            <p key={${jsxValue(key)}} className="text-white text-sm xl:text-base mb-4">
+              {${jsxValue(desc.content.text)}}
+            </p>`;
       }
       return '';
     })
+    .filter(Boolean)
     .join('\n');
 
-  const cardImageUrl = cardContent[0]?.content?.cardImageUrl || '';
-  
-  // Escape all user-provided strings
-  const title = escape(heroContent.title || '');
-  const subtitle = escape(heroContent.subtitle || '');
-  const backgroundVideo = escape(heroContent.backgroundVideo || '');
-  const backgroundImage = escape(heroContent.backgroundImage || '');
-  const ctaText = escape(heroContent.ctaText || '');
-  const ctaLink = escape(heroContent.ctaLink || '');
-  const placeholder = escape(signupContent.placeholder || 'Enter your email');
-  const buttonText = escape(signupContent.buttonText || 'Subscribe');
+  const cardData = cardContent[0]?.content || {};
+  const cardImageUrl = cardData.cardImageUrl || cardData.frontImageUrl;
+  const backImageUrl = cardData.backImageUrl;
+  const frontMediaType = cardData.frontMediaType || (cardImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image");
+  const backMediaType = cardData.backMediaType || (backImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image");
+  const hasCard = cardContent.length > 0;
+  const hasFlip = backImageUrl && cardData.flipEnabled !== false;
 
-  return `export default function Home() {
+  return `"use client";
+
+import { useState } from 'react';
+
+// Card component that handles aspect ratio detection for videos
+function CardComponent({
+  cardImageUrl,
+  backImageUrl,
+  frontMediaType,
+  backMediaType,
+  hasFlip,
+}: {
+  cardImageUrl?: string;
+  backImageUrl?: string;
+  frontMediaType: string;
+  backMediaType: string;
+  hasFlip: boolean;
+}) {
+  const [frontAspectRatio, setFrontAspectRatio] = useState<number | null>(null);
+  const [backAspectRatio, setBackAspectRatio] = useState<number | null>(null);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Default to portrait aspect ratio if not detected
+  const frontAR = frontAspectRatio || 1.4; // Default 700/500 = 1.4 (portrait)
+  const backAR = backAspectRatio || frontAR; // Use front as fallback for back
+
+  // Calculate base dimensions for front side
+  const maxWidth = 280;
+  const frontIsLandscape = frontAR < 1;
+  const frontWidth = frontIsLandscape ? maxWidth * (1 / frontAR) : maxWidth;
+  const frontHeight = maxWidth * frontAR;
+  const frontArea = frontWidth * frontHeight;
+
+  // Calculate dimensions for back side that maintain the same area
+  // Given: area = width * height, and AR = height/width
+  // So: area = width * (AR * width) = AR * width^2
+  // Therefore: width = sqrt(area / AR), height = AR * width
+  const backWidth = Math.sqrt(frontArea / backAR);
+  const backHeight = backAR * backWidth;
+
+  // Use dimensions based on which side is showing, maintaining the same area
+  const cardWidth = isFlipped ? backWidth : frontWidth;
+  const cardHeight = isFlipped ? backHeight : frontHeight;
+
+  if (!cardImageUrl) {
+    return (
+      <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
+        <div className="w-full max-w-[280px] xl:max-w-none h-[400px] bg-[#1A1A1A] border border-[#333333] rounded-lg flex items-center justify-center text-[#8A8A8A]">
+          Card Preview
+        </div>
+      </div>
+    );
+  }
+
+  if (hasFlip) {
+    // Calculate tilt angle based on hover state
+    const tiltAngle = isHovered ? 15 : 0;
+    
+    return (
+      <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
+        <div
+          className="relative transition-all duration-500 cursor-pointer"
+          style={{
+            perspective: "1000px",
+            width: \`\${cardWidth}px\`,
+            height: \`\${cardHeight}px\`,
+            transform: \`rotateX(\${tiltAngle * 0.1}deg) rotateZ(\${tiltAngle * 0.05}deg)\`,
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
+          <div
+            className="relative w-full h-full transition-transform duration-500"
+            style={{
+              transformStyle: "preserve-3d",
+              transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+            }}
+          >
+            {/* Front Face */}
+            <div
+              className="absolute inset-0 w-full h-full rounded-lg border-2 border-[#333333] overflow-hidden shadow-lg transition-colors duration-300"
+              style={{
+                backfaceVisibility: "hidden",
+                transform: "rotateY(0deg)",
+                borderColor: isHovered ? "#00A0FF" : "#333333",
+              }}
+            >
+              ${frontMediaType === "video" ? `
+              <video
+                src={cardImageUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  if (video.videoWidth && video.videoHeight) {
+                    setFrontAspectRatio(video.videoHeight / video.videoWidth);
+                  }
+                }}
+              />` : `
+              <img
+                src={cardImageUrl}
+                alt="Collectible Card Front"
+                className="w-full h-full object-cover"
+              />`}
+            </div>
+            ${backImageUrl ? `/* Back Face */
+            <div
+              className="absolute inset-0 w-full h-full rounded-lg border-2 border-[#333333] overflow-hidden shadow-lg transition-colors duration-300"
+              style={{
+                backfaceVisibility: "hidden",
+                transform: "rotateY(180deg)",
+                borderColor: isHovered ? "#00A0FF" : "#333333",
+              }}
+            >
+              ${backMediaType === "video" ? `
+              <video
+                src={backImageUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  if (video.videoWidth && video.videoHeight) {
+                    setBackAspectRatio(video.videoHeight / video.videoWidth);
+                  }
+                }}
+              />` : `
+              <img
+                src={backImageUrl}
+                alt="Collectible Card Back"
+                className="w-full h-full object-cover"
+              />`}
+            </div>` : ''}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Simple card without flip
+  const [isHoveredSimple, setIsHoveredSimple] = useState(false);
+  const tiltAngleSimple = isHoveredSimple ? 15 : 0;
+  
+  return (
+    <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
+      <div
+        className="relative transition-all duration-500 cursor-grab"
+        style={{
+          transform: \`rotateX(\${tiltAngleSimple * 0.1}deg) rotateZ(\${tiltAngleSimple * 0.05}deg)\`,
+        }}
+        onMouseEnter={() => setIsHoveredSimple(true)}
+        onMouseLeave={() => setIsHoveredSimple(false)}
+      >
+        ${frontMediaType === "video" ? `
+        <video
+          src={cardImageUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="border border-[#333333] duration-300 w-full max-w-[280px] xl:max-w-none rounded-lg transition-colors"
+          style={{
+            borderColor: isHoveredSimple ? "#00A0FF" : "#333333",
+          }}
+          onLoadedMetadata={(e) => {
+            const video = e.currentTarget;
+            if (video.videoWidth && video.videoHeight) {
+              setFrontAspectRatio(video.videoHeight / video.videoWidth);
+            }
+          }}
+        />` : `
+        <img
+          src={cardImageUrl}
+          alt="Collectible Card"
+          className="border border-[#333333] duration-300 w-full max-w-[280px] xl:max-w-none transition-colors"
+          style={{
+            borderColor: isHoveredSimple ? "#00A0FF" : "#333333",
+          }}
+        />`}
+      </div>
+    </div>
+  );
+}
+
+export default function Home() {
+  // Hero content
+  const heroContent = {
+    title: ${jsxValue(heroContent.title)},
+    backgroundVideo: ${jsxValue(heroContent.backgroundVideo)},
+    backgroundImage: ${jsxValue(heroContent.backgroundImage)},
+    ctaText: ${jsxValue(heroContent.ctaText)},
+    ctaLink: ${jsxValue(heroContent.ctaLink)},
+  };
+
+  // Signup content
+  const signupContent = {
+    enabled: ${signupContent.enabled ? 'true' : 'false'},
+    placeholder: ${jsxValue(signupContent.placeholder || 'Enter your email')},
+    buttonText: ${jsxValue(signupContent.buttonText || 'Subscribe')},
+  };
+
   return (
     <div className="bg-black min-h-screen relative overflow-hidden">
-      {/* Full-Screen Background Video */}
-      ${backgroundVideo ? `
-      <div className="fixed top-0 left-0 w-full h-full opacity-80 z-0">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="w-full h-full object-cover"
+      {/* Video Background */}
+      {heroContent.backgroundVideo && (
+        <div 
+          className="fixed top-0 left-0 w-full min-h-screen opacity-80 z-0"
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            width: '100%', 
+            height: '100vh',
+            minHeight: '100vh', 
+            opacity: 0.8, 
+            zIndex: 0,
+            pointerEvents: 'none'
+          }}
         >
-          <source src={${JSON.stringify(backgroundVideo)}} type="video/mp4" />
-        </video>
-      </div>
-      ` : ''}
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            className="w-full h-full object-cover"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          >
+            <source src={heroContent.backgroundVideo} type="video/mp4" />
+          </video>
+        </div>
+      )}
 
-      {/* Full-Screen Background Image */}
-      ${backgroundImage && !backgroundVideo ? `
-      <div
-        className="fixed top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat z-0"
-        style={{ backgroundImage: \`url(${JSON.stringify(backgroundImage)})\` }}
-      />
-      ` : ''}
+      {/* Background Image Overlay */}
+      {heroContent.backgroundImage && !heroContent.backgroundVideo && (
+        <div
+          className="fixed top-0 left-0 w-full min-h-screen bg-cover bg-center bg-no-repeat z-0"
+          style={{ backgroundImage: 'url(' + heroContent.backgroundImage + ')' }}
+        />
+      )}
 
-      {/* Main Content Overlay */}
-      <div className="relative w-full min-h-screen flex flex-col xl:flex-row xl:h-screen p-4 xl:p-8 z-10">
+      {/* Main Content */}
+      <div 
+        className="relative w-full min-h-screen flex flex-col xl:flex-row xl:h-screen p-4 xl:p-8 z-10"
+        style={{ 
+          position: 'relative', 
+          zIndex: 10
+        }}
+      >
         <div className="flex flex-col xl:flex-row xl:m-auto gap-8 xl:gap-20 w-full max-w-7xl mx-auto">
           {/* Card - shown first on mobile, on right on desktop */}
-          ${cardImageUrl ? `
-          <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
-            <img
-              src={${JSON.stringify(cardImageUrl)}}
-              alt="Collectible Card"
-              className="rotate-[5deg] hover:rotate-[-2.5deg] border border-[#333333] hover:border-[#00A0FF] duration-500 cursor-grab w-full max-w-[280px] xl:max-w-none transition-transform"
-            />
-          </div>
+          ${hasCard ? `
+          <CardComponent
+            cardImageUrl={${jsxValue(cardImageUrl)}}
+            backImageUrl={${jsxValue(backImageUrl)}}
+            frontMediaType={${jsxValue(frontMediaType)}}
+            backMediaType={${jsxValue(backMediaType)}}
+            hasFlip={${hasFlip ? 'true' : 'false'}}
+          />
           ` : ''}
 
-          {/* Text Content - shown second on mobile, on left on desktop */}
-          <div className="my-auto w-full max-w-3xl order-2 xl:order-1">
-            ${title ? `
-            <h1 className="text-white text-4xl xl:text-6xl leading-tight mb-6 xl:mb-8 font-bold">
-              {${JSON.stringify(title)}}
-            </h1>
-            ` : ''}
+          {/* Text Content - shown third on mobile, on left on desktop */}
+          <div className="my-auto w-full max-w-3xl order-3 xl:order-1">
+            {heroContent.title && (
+              <h1 className="text-white text-4xl xl:text-6xl leading-tight mb-6 xl:mb-8 font-bold">
+                {heroContent.title}
+              </h1>
+            )}
             
-            ${subtitle ? `
-            <p className="text-white text-sm xl:text-base mb-4 xl:mb-6 leading-relaxed">
-              {${JSON.stringify(subtitle)}}
-            </p>
-            ` : ''}
+${descriptionRendering || ''}
 
-            ${descriptionHtml ? `
-            <div className="text-white text-sm xl:text-base mb-4" dangerouslySetInnerHTML={{ __html: ${JSON.stringify(descriptionHtml)} }} />
-            ` : ''}
-
-            ${ctaText && ctaLink ? `
-            <div className="mt-6 xl:mt-8">
-              <a
-                href={${JSON.stringify(ctaLink)}}
-                className="inline-block px-6 py-3 bg-[#00A0FF] hover:bg-[#0088CC] text-white font-medium rounded-lg transition-colors"
-              >
-                {${JSON.stringify(ctaText)}}
-              </a>
-            </div>
-            ` : ''}
-
-            ${signupContent.enabled ? `
-            <div className="mt-8">
-              <form className="flex flex-col sm:flex-row gap-2" onSubmit={(e) => { e.preventDefault(); }}>
-                <input
-                  type="email"
-                  placeholder={${JSON.stringify(placeholder)}}
-                  className="flex-1 px-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF]"
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-[#00A0FF] hover:bg-[#0088CC] text-white font-medium rounded-lg transition-colors"
+            {/* CTA Button */}
+            {heroContent.ctaText && heroContent.ctaLink && (
+              <div className="mt-6 xl:mt-8" style={{ marginTop: '1.5rem' }}>
+                <a
+                  href={heroContent.ctaLink}
+                  className="inline-block px-6 py-3 bg-[#00A0FF] hover:bg-[#0088CC] text-white font-medium rounded-lg transition-colors"
+                  style={{
+                    display: 'inline-block',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#00A0FF',
+                    color: '#ffffff',
+                    fontWeight: '500',
+                    borderRadius: '0.5rem',
+                    textDecoration: 'none',
+                    transition: 'background-color 0.2s'
+                  }}
                 >
-                  {${JSON.stringify(buttonText)}}
-                </button>
-              </form>
-            </div>
-            ` : ''}
+                  {heroContent.ctaText}
+                </a>
+              </div>
+            )}
+
+            {/* Email Signup Form */}
+            {signupContent.enabled && (
+              <div className="mt-8">
+                <form className="flex flex-col sm:flex-row gap-2" onSubmit={(e) => { e.preventDefault(); }}>
+                  <input
+                    type="email"
+                    placeholder={signupContent.placeholder}
+                    className="flex-1 px-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-[#00A0FF] hover:bg-[#0088CC] text-white font-medium rounded-lg transition-colors"
+                  >
+                    {signupContent.buttonText}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>

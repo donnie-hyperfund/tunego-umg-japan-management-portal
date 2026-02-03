@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface SiteContent {
   id: string;
@@ -11,7 +11,7 @@ interface SiteContent {
   isVisible: boolean;
 }
 
-export function renderTemplate(templateId: string, content: SiteContent[], assets: any[] = []): React.ReactElement {
+export function renderTemplate(templateId: string, content: SiteContent[], assets: any[] = [], isPreview: boolean = false): React.ReactElement {
   // Get content organized by section
   const contentBySection = content.reduce((acc, item) => {
     if (!acc[item.section]) {
@@ -29,7 +29,7 @@ export function renderTemplate(templateId: string, content: SiteContent[], asset
   // Render based on template
   switch (templateId) {
     case 'collectible-campaign':
-      return renderCollectibleCampaign(contentBySection, assets);
+      return renderCollectibleCampaign(contentBySection, assets, isPreview);
     default:
       return React.createElement('div', { className: 'p-4 text-white' }, `Template not found: ${templateId}`);
   }
@@ -37,7 +37,8 @@ export function renderTemplate(templateId: string, content: SiteContent[], asset
 
 function renderCollectibleCampaign(
   contentBySection: Record<string, SiteContent[]>,
-  assets: any[]
+  assets: any[],
+  isPreview: boolean = false
 ): React.ReactElement {
   // Get hero content - handle both text content type (with title/subtitle) and hero content type
   let heroContent: any = {};
@@ -56,11 +57,14 @@ function renderCollectibleCampaign(
   const cardContent = contentBySection.cards || [];
   const signupContent = contentBySection.signup?.[0]?.content || {};
 
+  const positionClass = isPreview ? "absolute" : "fixed";
+  const heightClass = isPreview ? "h-full" : "min-h-screen";
+
   return (
-    <div className="bg-black min-h-screen">
+    <div className={`bg-black ${isPreview ? "h-full" : "min-h-screen"}`}>
       {/* Video Background */}
       {heroContent.backgroundVideo && (
-        <div className="fixed top-0 left-0 w-full min-h-screen opacity-80">
+        <div className={`${positionClass} top-0 left-0 w-full ${heightClass} opacity-80`}>
           <video
             autoPlay
             muted
@@ -77,30 +81,33 @@ function renderCollectibleCampaign(
       {/* Background Image Overlay */}
       {heroContent.backgroundImage && !heroContent.backgroundVideo && (
         <div
-          className="fixed top-0 left-0 w-full min-h-screen bg-cover bg-center bg-no-repeat"
+          className={`${positionClass} top-0 left-0 w-full ${heightClass} bg-cover bg-center bg-no-repeat`}
           style={{ backgroundImage: `url(${heroContent.backgroundImage})` }}
         />
       )}
 
       {/* Main Content */}
-      <div className="relative w-full min-h-screen flex flex-col xl:flex-row xl:h-screen p-4 xl:p-8">
+      <div className={`relative w-full ${isPreview ? "h-full" : "min-h-screen"} flex flex-col xl:flex-row ${isPreview ? "" : "xl:h-screen"} p-4 xl:p-8`}>
         <div className="flex flex-col xl:flex-row xl:m-auto gap-8 xl:gap-20 w-full max-w-7xl mx-auto">
           {/* Card - shown first on mobile, on right on desktop */}
-          {cardContent.length > 0 && (
-            <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
-              {cardContent[0]?.content?.cardImageUrl ? (
-                <img
-                  src={cardContent[0].content.cardImageUrl}
-                  alt="Collectible Card"
-                  className="rotate-[5deg] hover:rotate-[-2.5deg] border border-[#333333] hover:border-[#00A0FF] duration-500 cursor-grab w-full max-w-[280px] xl:max-w-none"
-                />
-              ) : (
-                <div className="w-full max-w-[280px] xl:max-w-none h-[400px] bg-[#1A1A1A] border border-[#333333] rounded-lg flex items-center justify-center text-[#8A8A8A]">
-                  Card Preview
-                </div>
-              )}
-            </div>
-          )}
+          {cardContent.length > 0 && (() => {
+            const cardData = cardContent[0]?.content || {};
+            const cardImageUrl = cardData.cardImageUrl || cardData.frontImageUrl;
+            const backImageUrl = cardData.backImageUrl;
+            const frontMediaType = cardData.frontMediaType || (cardImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image");
+            const backMediaType = cardData.backMediaType || (backImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image");
+            const hasFlip = cardData.backImageUrl && cardData.flipEnabled !== false;
+            
+            return (
+              <CardComponent
+                cardImageUrl={cardImageUrl}
+                backImageUrl={backImageUrl}
+                frontMediaType={frontMediaType}
+                backMediaType={backMediaType}
+                hasFlip={hasFlip}
+              />
+            );
+          })()}
 
           {/* Text Content - shown third on mobile, on left on desktop */}
           <div className="my-auto w-full max-w-3xl order-3 xl:order-1">
@@ -161,6 +168,201 @@ function renderCollectibleCampaign(
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Card component that handles aspect ratio detection for videos
+function CardComponent({
+  cardImageUrl,
+  backImageUrl,
+  frontMediaType,
+  backMediaType,
+  hasFlip,
+}: {
+  cardImageUrl?: string;
+  backImageUrl?: string;
+  frontMediaType: string;
+  backMediaType: string;
+  hasFlip: boolean;
+}) {
+  const [frontAspectRatio, setFrontAspectRatio] = useState<number | null>(null);
+  const [backAspectRatio, setBackAspectRatio] = useState<number | null>(null);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Default to portrait aspect ratio if not detected
+  const frontAR = frontAspectRatio || 1.4; // Default 700/500 = 1.4 (portrait)
+  const backAR = backAspectRatio || frontAR; // Use front as fallback for back
+
+  // Calculate base dimensions for front side
+  const maxWidth = 280;
+  const frontIsLandscape = frontAR < 1;
+  const frontWidth = frontIsLandscape ? maxWidth * (1 / frontAR) : maxWidth;
+  const frontHeight = maxWidth * frontAR;
+  const frontArea = frontWidth * frontHeight;
+
+  // Calculate dimensions for back side that maintain the same area
+  // Given: area = width * height, and AR = height/width
+  // So: area = width * (AR * width) = AR * width^2
+  // Therefore: width = sqrt(area / AR), height = AR * width
+  const backWidth = Math.sqrt(frontArea / backAR);
+  const backHeight = backAR * backWidth;
+
+  // Use dimensions based on which side is showing, maintaining the same area
+  const cardWidth = isFlipped ? backWidth : frontWidth;
+  const cardHeight = isFlipped ? backHeight : frontHeight;
+
+  if (!cardImageUrl) {
+    return (
+      <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
+        <div className="w-full max-w-[280px] xl:max-w-none h-[400px] bg-[#1A1A1A] border border-[#333333] rounded-lg flex items-center justify-center text-[#8A8A8A]">
+          Card Preview
+        </div>
+      </div>
+    );
+  }
+
+  if (hasFlip) {
+    // Calculate tilt angle based on hover state
+    const tiltAngle = isHovered ? 15 : 0;
+    
+    return (
+      <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
+        <div
+          className="relative transition-all duration-500 cursor-pointer"
+          style={{
+            perspective: "1000px",
+            width: `${cardWidth}px`,
+            height: `${cardHeight}px`,
+            transform: `rotateX(${tiltAngle * 0.1}deg) rotateZ(${tiltAngle * 0.05}deg)`,
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
+          <div
+            className="relative w-full h-full transition-transform duration-500"
+            style={{
+              transformStyle: "preserve-3d",
+              transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+            }}
+          >
+            {/* Front Face */}
+            <div
+              className="absolute inset-0 w-full h-full rounded-lg border-2 border-[#333333] overflow-hidden shadow-lg transition-colors duration-300"
+              style={{
+                backfaceVisibility: "hidden",
+                transform: "rotateY(0deg)",
+                borderColor: isHovered ? "#00A0FF" : "#333333",
+              }}
+            >
+              {frontMediaType === "video" ? (
+                <video
+                  src={cardImageUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  onLoadedMetadata={(e) => {
+                    const video = e.currentTarget;
+                    if (video.videoWidth && video.videoHeight) {
+                      setFrontAspectRatio(video.videoHeight / video.videoWidth);
+                    }
+                  }}
+                />
+              ) : (
+                <img
+                  src={cardImageUrl}
+                  alt="Collectible Card Front"
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            {/* Back Face */}
+            {backImageUrl && (
+              <div
+                className="absolute inset-0 w-full h-full rounded-lg border-2 border-[#333333] overflow-hidden shadow-lg transition-colors duration-300"
+                style={{
+                  backfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
+                  borderColor: isHovered ? "#00A0FF" : "#333333",
+                }}
+              >
+                {backMediaType === "video" ? (
+                  <video
+                    src={backImageUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                    onLoadedMetadata={(e) => {
+                      const video = e.currentTarget;
+                      if (video.videoWidth && video.videoHeight) {
+                        setBackAspectRatio(video.videoHeight / video.videoWidth);
+                      }
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={backImageUrl}
+                    alt="Collectible Card Back"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Simple card without flip
+  const [isHoveredSimple, setIsHoveredSimple] = useState(false);
+  const tiltAngleSimple = isHoveredSimple ? 15 : 0;
+  
+  return (
+    <div className="flex justify-center xl:my-auto w-full xl:w-auto xl:max-w-sm order-1 xl:order-2 pt-4 xl:pt-0">
+      <div
+        className="relative transition-all duration-500 cursor-grab"
+        style={{
+          transform: `rotateX(${tiltAngleSimple * 0.1}deg) rotateZ(${tiltAngleSimple * 0.05}deg)`,
+        }}
+        onMouseEnter={() => setIsHoveredSimple(true)}
+        onMouseLeave={() => setIsHoveredSimple(false)}
+      >
+        {frontMediaType === "video" ? (
+          <video
+            src={cardImageUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="border border-[#333333] duration-300 w-full max-w-[280px] xl:max-w-none rounded-lg transition-colors"
+            style={{
+              borderColor: isHoveredSimple ? "#00A0FF" : "#333333",
+            }}
+            onLoadedMetadata={(e) => {
+              const video = e.currentTarget;
+              if (video.videoWidth && video.videoHeight) {
+                setFrontAspectRatio(video.videoHeight / video.videoWidth);
+              }
+            }}
+          />
+        ) : (
+          <img
+            src={cardImageUrl}
+            alt="Collectible Card"
+            className="border border-[#333333] duration-300 w-full max-w-[280px] xl:max-w-none transition-colors"
+            style={{
+              borderColor: isHoveredSimple ? "#00A0FF" : "#333333",
+            }}
+          />
+        )}
       </div>
     </div>
   );

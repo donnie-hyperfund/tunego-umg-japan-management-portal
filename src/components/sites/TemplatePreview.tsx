@@ -77,10 +77,46 @@ export default function TemplatePreview({ siteId, templateId }: TemplatePreviewP
   const fetchContent = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/sites/${siteId}/content`);
-      if (!response.ok) throw new Error("Failed to fetch content");
-      const data = await response.json();
-      setContent(data.filter((item: SiteContent) => item.isVisible));
+      const [contentResponse, cardsResponse] = await Promise.all([
+        fetch(`/api/sites/${siteId}/content`),
+        fetch(`/api/sites/${siteId}/card-manifests`),
+      ]);
+      
+      if (!contentResponse.ok) throw new Error("Failed to fetch content");
+      const contentData = await contentResponse.json();
+      
+      // Fetch active card manifests and add them to content
+      let cardContent: SiteContent[] = [];
+      if (cardsResponse.ok) {
+        const cardsData = await cardsResponse.json();
+        const activeCards = cardsData.filter((card: any) => card.isActive);
+        if (activeCards.length > 0) {
+          const activeCard = activeCards[0];
+          // Derive media types from URLs
+          const frontMediaType = activeCard.frontImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image";
+          const backMediaType = activeCard.backImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image";
+          
+          cardContent = [{
+            id: activeCard.id,
+            section: "cards",
+            contentType: "cardManifest",
+            content: {
+              cardImageUrl: activeCard.cardImageUrl || activeCard.frontImageUrl,
+              frontImageUrl: activeCard.frontImageUrl,
+              backImageUrl: activeCard.backImageUrl,
+              frontMediaType: frontMediaType,
+              backMediaType: backMediaType,
+              flipEnabled: activeCard.manifest?.interactions?.flipEnabled !== false,
+            },
+            order: 0,
+            isVisible: true,
+          }];
+        }
+      }
+      
+      // Combine content and card content
+      const allContent = [...contentData.filter((item: SiteContent) => item.isVisible), ...cardContent];
+      setContent(allContent);
     } catch (error) {
       console.error("Error fetching content:", error);
     } finally {
@@ -104,8 +140,17 @@ export default function TemplatePreview({ siteId, templateId }: TemplatePreviewP
           How your site will look • Template: {templateName}
         </p>
       </div>
-      <div className="relative bg-black" style={{ minHeight: "600px", maxHeight: "800px", overflow: "auto" }}>
-        {renderTemplate(templateName, content)}
+      <div 
+        className="relative bg-black" 
+        style={{ 
+          minHeight: "600px", 
+          maxHeight: "800px", 
+          overflow: "hidden"
+        }}
+      >
+        <div className="relative w-full h-full" style={{ height: "800px", overflow: "auto" }}>
+          {renderTemplate(templateName, content, [], true)}
+        </div>
       </div>
     </div>
   );

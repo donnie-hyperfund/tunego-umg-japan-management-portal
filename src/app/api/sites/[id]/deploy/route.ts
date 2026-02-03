@@ -50,6 +50,16 @@ export async function POST(
 
     // Generate project files
     const project = await generateProject(id);
+    
+    // Debug logging
+    console.log('Generated project files:', Object.keys(project.files));
+    console.log('Has postcss.config.mjs:', 'postcss.config.mjs' in project.files);
+    if (project.files['src/app/page.tsx']) {
+      const pageContent = project.files['src/app/page.tsx'] as string;
+      console.log('Page.tsx includes z-0:', pageContent.includes('z-0'));
+      console.log('Page.tsx includes z-10:', pageContent.includes('z-10'));
+      console.log('Page.tsx includes overflow-hidden:', pageContent.includes('overflow-hidden'));
+    }
 
     // Check if project already exists
     let projectId = site.vercelProjectId;

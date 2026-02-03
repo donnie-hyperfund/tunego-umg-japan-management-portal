@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     domains: [],
     unoptimized: true,
   },
+  // Increase body size limit for file uploads
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
+  },
   webpack: (config, { isServer }) => {
     // Fix for leaflet-draw CSS image imports
     if (!isServer) {

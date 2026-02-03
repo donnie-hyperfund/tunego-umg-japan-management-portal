@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Loader2, Eye, Code, FileText, Monitor } from "lucide-react";
+import { Plus, Trash2, Loader2, Eye, Code, FileText, Monitor, Image as ImageIcon, Video } from "lucide-react";
 import MediaPreview from "./MediaPreview";
+import AssetPicker from "./AssetPicker";
 
 interface CardManifest {
   id: string;
   name: string;
   manifest: any;
   cardImageUrl: string | null;
+  frontImageUrl: string | null;
+  backImageUrl: string | null;
   isActive: boolean;
 }
 
@@ -22,6 +25,15 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editorMode, setEditorMode] = useState<"visual" | "json">("visual");
+  const [assetPickerState, setAssetPickerState] = useState<{
+    isOpen: boolean;
+    field: "frontImageUrl" | "backImageUrl" | "cardImageUrl";
+    filterType?: "image" | "video" | "all";
+  }>({
+    isOpen: false,
+    field: "cardImageUrl",
+    filterType: "image",
+  });
   const [newManifest, setNewManifest] = useState({
     name: "",
     manifest: {
@@ -50,6 +62,10 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
       },
     },
     cardImageUrl: "",
+    frontImageUrl: "",
+    backImageUrl: "",
+    frontMediaType: "image" as "image" | "video",
+    backMediaType: "image" as "image" | "video",
   });
 
   useEffect(() => {
@@ -59,12 +75,16 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
   const fetchManifests = async () => {
     try {
       setLoading(true);
-      // TODO: Create API route for card manifests
-      // const response = await fetch(`/api/sites/${siteId}/card-manifests`);
-      // if (!response.ok) throw new Error("Failed to fetch manifests");
-      // const data = await response.json();
-      // setManifests(data);
-      setManifests([]); // Placeholder
+      const response = await fetch(`/api/sites/${siteId}/card-manifests`);
+      if (!response.ok) throw new Error("Failed to fetch manifests");
+      const data = await response.json();
+      // Derive media types from URLs if not present
+      const manifestsWithMediaTypes = data.map((manifest: any) => ({
+        ...manifest,
+        frontMediaType: manifest.frontMediaType || (manifest.frontImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image"),
+        backMediaType: manifest.backMediaType || (manifest.backImageUrl?.match(/\.(mp4|webm|mov)$/i) ? "video" : "image"),
+      }));
+      setManifests(manifestsWithMediaTypes);
     } catch (error) {
       console.error("Error fetching manifests:", error);
     } finally {
@@ -74,13 +94,112 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
 
   const handleSave = async () => {
     try {
-      // TODO: Implement save API
-      alert("Card manifest save functionality coming soon");
+      if (!newManifest.name || !newManifest.manifest) {
+        alert("Please fill in all required fields (name and manifest)");
+        return;
+      }
+
+      const payload = {
+        name: newManifest.name,
+        manifest: newManifest.manifest,
+        cardImageUrl: newManifest.cardImageUrl || null,
+        frontImageUrl: newManifest.frontImageUrl || null,
+        backImageUrl: newManifest.backImageUrl || null,
+        frontMediaType: newManifest.frontMediaType,
+        backMediaType: newManifest.backMediaType,
+      };
+
+      let response;
+      if (editingId) {
+        // Update existing manifest
+        response = await fetch(`/api/sites/${siteId}/card-manifests/${editingId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Create new manifest
+        response = await fetch(`/api/sites/${siteId}/card-manifests`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save manifest");
+      }
+
+      // Refresh the list
+      await fetchManifests();
+      
+      // Reset form
       setShowAddForm(false);
       setEditingId(null);
+      setNewManifest({
+        name: "",
+        manifest: {
+          id: "",
+          name: "",
+          description: "",
+          version: "1.0.0",
+          dimensions: { width: 500, height: 700, thickness: 10 },
+          faces: {
+            front: { id: "front", name: "Front Face", layers: [] },
+            back: { id: "back", name: "Back Face", layers: [] },
+          },
+          effects: {
+            tilt: { enabled: true, maxAngle: 45 },
+            layerEffects: { enabled: true },
+          },
+          interactions: {
+            flipEnabled: true,
+            clickToFlip: true,
+          },
+          metadata: {
+            artist: "",
+            series: "",
+            rarity: "Limited",
+            tags: [],
+          },
+        },
+        cardImageUrl: "",
+        frontImageUrl: "",
+        backImageUrl: "",
+        frontMediaType: "image" as "image" | "video",
+        backMediaType: "image" as "image" | "video",
+      });
     } catch (error) {
       console.error("Error saving manifest:", error);
-      alert("Failed to save manifest. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to save manifest. Please try again.");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this card manifest? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/sites/${siteId}/card-manifests/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete manifest");
+      }
+
+      // Refresh the list
+      await fetchManifests();
+    } catch (error) {
+      console.error("Error deleting manifest:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete manifest. Please try again.");
     }
   };
 
@@ -143,6 +262,10 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
             <CardPreview
               manifest={newManifest.manifest}
               cardImageUrl={newManifest.cardImageUrl}
+              frontImageUrl={newManifest.frontImageUrl}
+              backImageUrl={newManifest.backImageUrl}
+              frontMediaType={newManifest.frontMediaType}
+              backMediaType={newManifest.backMediaType}
               cardName={newManifest.name}
             />
           </div>
@@ -208,22 +331,194 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#CCCCCC] mb-2">
-                Card Preview Image URL
-              </label>
-              <input
-                type="url"
-                value={newManifest.cardImageUrl}
-                onChange={(e) =>
-                  setNewManifest({ ...newManifest, cardImageUrl: e.target.value })
-                }
-                className="w-full px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
-                placeholder="https://example.com/card-preview.png"
-              />
-              {newManifest.cardImageUrl && (
-                <MediaPreview url={newManifest.cardImageUrl} type="image" />
-              )}
+            {/* Card Assets Section */}
+            <div className="bg-[#060606] border border-[#1A1A1A] rounded-lg p-4 space-y-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Card Assets</h3>
+              
+              {/* Front Face Asset */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-[#CCCCCC]">
+                    Front Face Media
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewManifest({ ...newManifest, frontMediaType: "image" })
+                      }
+                      className={`px-3 py-1 text-xs rounded transition-colors ${
+                        newManifest.frontMediaType === "image"
+                          ? "bg-[#00A0FF] text-white"
+                          : "bg-[#1A1A1A] text-[#CCCCCC] hover:bg-[#2A2A2A]"
+                      }`}
+                    >
+                      Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewManifest({ ...newManifest, frontMediaType: "video" })
+                      }
+                      className={`px-3 py-1 text-xs rounded transition-colors ${
+                        newManifest.frontMediaType === "video"
+                          ? "bg-[#00A0FF] text-white"
+                          : "bg-[#1A1A1A] text-[#CCCCCC] hover:bg-[#2A2A2A]"
+                      }`}
+                    >
+                      Video
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={newManifest.frontImageUrl}
+                    onChange={(e) =>
+                      setNewManifest({ ...newManifest, frontImageUrl: e.target.value })
+                    }
+                    className="flex-1 px-4 py-2 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
+                    placeholder={
+                      newManifest.frontMediaType === "video"
+                        ? "https://example.com/card-front.mp4"
+                        : "https://example.com/card-front.png"
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAssetPickerState({
+                        isOpen: true,
+                        field: "frontImageUrl",
+                        filterType: newManifest.frontMediaType,
+                      })
+                    }
+                    className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-[#1A1A1A] rounded-lg text-[#CCCCCC] hover:text-white transition-colors flex items-center gap-2"
+                    title="Browse assets"
+                  >
+                    {newManifest.frontMediaType === "video" ? (
+                      <Video className="w-4 h-4" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-[#8A8A8A]">
+                  {newManifest.frontMediaType === "video"
+                    ? "Video displayed on the front of the card (recommended: MP4, 800x1200px portrait)"
+                    : "Image displayed on the front of the card (recommended: 800x1200px portrait)"}
+                </p>
+                {newManifest.frontImageUrl && (
+                  <div className="mt-2">
+                    <MediaPreview
+                      url={newManifest.frontImageUrl}
+                      type={newManifest.frontMediaType}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Back Face Asset */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-[#CCCCCC]">
+                    Back Face Media
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewManifest({ ...newManifest, backMediaType: "image" })
+                      }
+                      className={`px-3 py-1 text-xs rounded transition-colors ${
+                        newManifest.backMediaType === "image"
+                          ? "bg-[#00A0FF] text-white"
+                          : "bg-[#1A1A1A] text-[#CCCCCC] hover:bg-[#2A2A2A]"
+                      }`}
+                    >
+                      Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewManifest({ ...newManifest, backMediaType: "video" })
+                      }
+                      className={`px-3 py-1 text-xs rounded transition-colors ${
+                        newManifest.backMediaType === "video"
+                          ? "bg-[#00A0FF] text-white"
+                          : "bg-[#1A1A1A] text-[#CCCCCC] hover:bg-[#2A2A2A]"
+                      }`}
+                    >
+                      Video
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={newManifest.backImageUrl}
+                    onChange={(e) =>
+                      setNewManifest({ ...newManifest, backImageUrl: e.target.value })
+                    }
+                    className="flex-1 px-4 py-2 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
+                    placeholder={
+                      newManifest.backMediaType === "video"
+                        ? "https://example.com/card-back.mp4"
+                        : "https://example.com/card-back.png"
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAssetPickerState({
+                        isOpen: true,
+                        field: "backImageUrl",
+                        filterType: newManifest.backMediaType,
+                      })
+                    }
+                    className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-[#1A1A1A] rounded-lg text-[#CCCCCC] hover:text-white transition-colors flex items-center gap-2"
+                    title="Browse assets"
+                  >
+                    {newManifest.backMediaType === "video" ? (
+                      <Video className="w-4 h-4" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-[#8A8A8A]">
+                  {newManifest.backMediaType === "video"
+                    ? "Video displayed on the back of the card when flipped (recommended: MP4, 800x1200px portrait)"
+                    : "Image displayed on the back of the card when flipped (recommended: 800x1200px portrait)"}
+                </p>
+                {newManifest.backImageUrl && (
+                  <div className="mt-2">
+                    <MediaPreview
+                      url={newManifest.backImageUrl}
+                      type={newManifest.backMediaType}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Legacy Preview Image (optional) */}
+              <div>
+                <label className="block text-sm font-medium text-[#CCCCCC] mb-2">
+                  Preview Image URL <span className="text-[#8A8A8A] text-xs">(Optional - Legacy)</span>
+                </label>
+                <input
+                  type="url"
+                  value={newManifest.cardImageUrl}
+                  onChange={(e) =>
+                    setNewManifest({ ...newManifest, cardImageUrl: e.target.value })
+                  }
+                  className="w-full px-4 py-2 bg-[#0F0F0F] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors"
+                  placeholder="https://example.com/card-preview.png"
+                />
+                <p className="mt-2 text-xs text-[#8A8A8A]">
+                  Legacy preview image (fallback if front/back images not set)
+                </p>
+              </div>
             </div>
 
             {editorMode === "visual" ? (
@@ -299,6 +594,10 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
                     },
                   },
                   cardImageUrl: "",
+                  frontImageUrl: "",
+                  backImageUrl: "",
+                  frontMediaType: "image" as "image" | "video",
+                  backMediaType: "image" as "image" | "video",
                 });
               }}
               className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] text-[#CCCCCC] font-medium rounded-lg transition-colors"
@@ -308,6 +607,22 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
           </div>
         </div>
       ) : null}
+
+      {/* Asset Picker */}
+      <AssetPicker
+        siteId={siteId}
+        isOpen={assetPickerState.isOpen}
+        onClose={() => setAssetPickerState({ ...assetPickerState, isOpen: false })}
+        onSelect={(assetUrl) => {
+          setNewManifest({
+            ...newManifest,
+            [assetPickerState.field]: assetUrl,
+          });
+          setAssetPickerState({ ...assetPickerState, isOpen: false });
+        }}
+        filterType={assetPickerState.filterType || "image"}
+        title={`Select ${assetPickerState.field === "frontImageUrl" ? "Front" : assetPickerState.field === "backImageUrl" ? "Back" : "Preview"} Face ${newManifest[assetPickerState.field === "frontImageUrl" ? "frontMediaType" : assetPickerState.field === "backImageUrl" ? "backMediaType" : "image"] === "video" ? "Video" : "Image"}`}
+      />
 
       {manifests.length === 0 ? (
         <div className="text-center py-12 bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl">
@@ -353,6 +668,10 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
                     name: manifest.name,
                     manifest: manifest.manifest,
                     cardImageUrl: manifest.cardImageUrl || "",
+                    frontImageUrl: manifest.frontImageUrl || "",
+                    backImageUrl: manifest.backImageUrl || "",
+                    frontMediaType: (manifest as any).frontMediaType || "image",
+                    backMediaType: (manifest as any).backMediaType || "image",
                   });
                 }}
                 className="w-full px-4 py-2 bg-[#1A1A1A] hover:bg-[#2A2A2A] text-[#CCCCCC] font-medium rounded-lg transition-colors"
@@ -365,11 +684,6 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
       )}
     </div>
   );
-
-  function handleDelete(id: string) {
-    // TODO: Implement delete
-    alert("Delete functionality coming soon");
-  }
 }
 
 interface VisualManifestEditorProps {
@@ -637,22 +951,58 @@ function VisualManifestEditor({ manifest, onChange }: VisualManifestEditorProps)
 interface CardPreviewProps {
   manifest: any;
   cardImageUrl: string;
+  frontImageUrl?: string;
+  backImageUrl?: string;
+  frontMediaType?: "image" | "video";
+  backMediaType?: "image" | "video";
   cardName: string;
 }
 
-function CardPreview({ manifest, cardImageUrl, cardName }: CardPreviewProps) {
+function CardPreview({
+  manifest,
+  cardImageUrl,
+  frontImageUrl,
+  backImageUrl,
+  frontMediaType = "image",
+  backMediaType = "image",
+  cardName,
+}: CardPreviewProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [frontVideoAspectRatio, setFrontVideoAspectRatio] = useState<number | null>(null);
+  const [backVideoAspectRatio, setBackVideoAspectRatio] = useState<number | null>(null);
 
   const dimensions = manifest.dimensions || { width: 500, height: 700, thickness: 10 };
   const effects = manifest.effects || {};
   const interactions = manifest.interactions || {};
   const metadata = manifest.metadata || {};
 
-  // Calculate aspect ratio for display
-  const aspectRatio = dimensions.height / dimensions.width;
-  const displayWidth = 280;
-  const displayHeight = displayWidth * aspectRatio;
+  // Determine aspect ratios for both sides - use video aspect ratio if available, otherwise use manifest dimensions
+  const defaultAR = dimensions.height / dimensions.width;
+  const frontAR = frontMediaType === "video" && frontVideoAspectRatio 
+    ? frontVideoAspectRatio 
+    : defaultAR;
+  const backAR = backMediaType === "video" && backVideoAspectRatio 
+    ? backVideoAspectRatio 
+    : defaultAR;
+
+  // Calculate base display dimensions for front side
+  const maxDisplayWidth = 280;
+  const frontIsLandscape = frontAR < 1;
+  const frontDisplayWidth = frontIsLandscape ? maxDisplayWidth * (1 / frontAR) : maxDisplayWidth;
+  const frontDisplayHeight = maxDisplayWidth * frontAR;
+  const frontArea = frontDisplayWidth * frontDisplayHeight;
+
+  // Calculate dimensions for back side that maintain the same area
+  // Given: area = width * height, and AR = height/width
+  // So: area = width * (AR * width) = AR * width^2
+  // Therefore: width = sqrt(area / AR), height = AR * width
+  const backDisplayWidth = Math.sqrt(frontArea / backAR);
+  const backDisplayHeight = backAR * backDisplayWidth;
+
+  // Use dimensions based on which side is showing, maintaining the same area
+  const displayWidth = isFlipped ? backDisplayWidth : frontDisplayWidth;
+  const displayHeight = isFlipped ? backDisplayHeight : frontDisplayHeight;
 
   // Tilt effect calculation
   const tiltEnabled = effects.tilt?.enabled ?? true;
@@ -683,11 +1033,12 @@ function CardPreview({ manifest, cardImageUrl, cardName }: CardPreviewProps) {
         {/* Card Preview */}
         <div className="flex-1 flex justify-center items-start">
           <div
-            className="relative"
+            className="relative transition-all duration-500"
             style={{
               perspective: "1000px",
               width: `${displayWidth}px`,
               height: `${displayHeight}px`,
+              minHeight: `${displayHeight}px`,
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -715,12 +1066,29 @@ function CardPreview({ manifest, cardImageUrl, cardName }: CardPreviewProps) {
                   transition: "all 0.3s ease",
                 }}
               >
-                {cardImageUrl ? (
-                  <img
-                    src={cardImageUrl}
-                    alt={cardName || "Card Preview"}
-                    className="w-full h-full object-cover"
-                  />
+                {frontImageUrl || cardImageUrl ? (
+                  frontMediaType === "video" ? (
+                    <video
+                      src={frontImageUrl || cardImageUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                      onLoadedMetadata={(e) => {
+                        const video = e.currentTarget;
+                        if (video.videoWidth && video.videoHeight) {
+                          setFrontVideoAspectRatio(video.videoHeight / video.videoWidth);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={frontImageUrl || cardImageUrl}
+                      alt={cardName || "Card Front"}
+                      className="w-full h-full object-cover"
+                    />
+                  )
                 ) : (
                   <div
                     className="w-full h-full bg-gradient-to-br from-[#1A1A1A] to-[#0F0F0F] flex flex-col items-center justify-center p-6"
@@ -732,7 +1100,7 @@ function CardPreview({ manifest, cardImageUrl, cardName }: CardPreviewProps) {
                     <div className="text-center">
                       <div className="text-4xl mb-4">🃏</div>
                       <h4 className="text-white font-bold text-xl mb-2">
-                        {cardName || "Card Preview"}
+                        {cardName || "Card Front"}
                       </h4>
                       <p className="text-[#8A8A8A] text-sm">
                         {dimensions.width} × {dimensions.height}px
@@ -742,6 +1110,9 @@ function CardPreview({ manifest, cardImageUrl, cardName }: CardPreviewProps) {
                           {manifest.description}
                         </p>
                       )}
+                      <p className="text-[#8A8A8A] text-xs mt-2">
+                        Add a front {frontMediaType} to preview
+                      </p>
                     </div>
                   </div>
                 )}
@@ -767,21 +1138,49 @@ function CardPreview({ manifest, cardImageUrl, cardName }: CardPreviewProps) {
                     borderColor: "#333333",
                   }}
                 >
-                  <div
-                    className="w-full h-full bg-gradient-to-br from-[#060606] to-[#1A1A1A] flex flex-col items-center justify-center p-6"
-                    style={{
-                      width: `${dimensions.width}px`,
-                      height: `${dimensions.height}px`,
-                    }}
-                  >
-                    <div className="text-center">
-                      <div className="text-6xl mb-4">✨</div>
-                      <h4 className="text-white font-bold text-xl mb-2">Card Back</h4>
-                      <p className="text-[#8A8A8A] text-sm">
-                        {manifest.name || cardName || "Card"}
-                      </p>
+                  {backImageUrl ? (
+                    backMediaType === "video" ? (
+                      <video
+                        src={backImageUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                        onLoadedMetadata={(e) => {
+                          const video = e.currentTarget;
+                          if (video.videoWidth && video.videoHeight) {
+                            setBackVideoAspectRatio(video.videoHeight / video.videoWidth);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={backImageUrl}
+                        alt={cardName || "Card Back"}
+                        className="w-full h-full object-cover"
+                      />
+                    )
+                  ) : (
+                    <div
+                      className="w-full h-full bg-gradient-to-br from-[#060606] to-[#1A1A1A] flex flex-col items-center justify-center p-6"
+                      style={{
+                        width: `${dimensions.width}px`,
+                        height: `${dimensions.height}px`,
+                      }}
+                    >
+                      <div className="text-center">
+                        <div className="text-6xl mb-4">✨</div>
+                        <h4 className="text-white font-bold text-xl mb-2">Card Back</h4>
+                        <p className="text-[#8A8A8A] text-sm">
+                          {manifest.name || cardName || "Card"}
+                        </p>
+                        <p className="text-[#8A8A8A] text-xs mt-2">
+                          Add a back {backMediaType} to preview
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
