@@ -43,7 +43,6 @@
     "react-json-view-lite": "^2.5.0",
     "react-leaflet": "^5.0.0",
     "react-leaflet-draw": "^0.21.0",
-    "react-quill": "^2.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
