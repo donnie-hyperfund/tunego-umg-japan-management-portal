@@ -1,7 +1,6 @@
 import { buildConfig } from 'payload/config';
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import { slateEditor } from '@payloadcms/richtext-slate';
-import { webpackBundler } from '@payloadcms/bundler-webpack';
 import { cloudStorage } from '@payloadcms/plugin-cloud-storage';
 import { vercelBlobStorage } from '@payloadcms/plugin-cloud-storage/vercel-blob';
 import path from 'path';
@@ -9,7 +8,6 @@ import path from 'path';
 export default buildConfig({
   admin: {
     user: 'users',
-    bundler: webpackBundler(),
   },
   editor: slateEditor({}),
   collections: [
