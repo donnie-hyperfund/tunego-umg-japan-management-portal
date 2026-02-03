@@ -28,7 +28,7 @@ export default function DeploymentPanel({
     deploymentStatus === 'error' ? 'error' : 
     'idle'
   );
-  const [currentDeploymentStatus, setCurrentDeploymentStatus] = useState<string | null>(deploymentStatus);
+  const [currentDeploymentStatus, setCurrentDeploymentStatus] = useState<string | null>(deploymentStatus ?? null);
   const [message, setMessage] = useState<string>("");
   const [deploymentUrl, setDeploymentUrl] = useState<string | null>(vercelDeploymentUrl);
   const [refreshing, setRefreshing] = useState(false);

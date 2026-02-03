@@ -83,7 +83,7 @@ async function generateCollectibleCampaignProject(
 
   // Sort each section by order
   Object.keys(contentBySection).forEach(section => {
-    contentBySection[section].sort((a, b) => a.order - b.order);
+    contentBySection[section].sort((a: { order: number }, b: { order: number }) => a.order - b.order);
   });
 
   // Get hero content - handle both hero content type and legacy text content type

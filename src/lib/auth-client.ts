@@ -8,9 +8,7 @@ import { useOrganization } from "@clerk/nextjs";
  * Returns false if user is not in an organization or not an admin
  */
 export function useIsAdmin(): boolean {
-  const { organization, membership } = useOrganization({
-    skipOrganizationLoader: false,
-  });
+  const { organization, membership } = useOrganization();
 
   // If no organization context, user is not an admin
   if (!organization || !membership) {

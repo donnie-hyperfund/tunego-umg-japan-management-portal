@@ -1,19 +1,18 @@
-import { getPayload } from 'payload';
-import config from '@/payload.config';
-import { NextRequest } from 'next/server';
+// Payload v3 admin routes are handled automatically by Next.js
+// This file can be removed if admin UI works without it
+// Keeping it for now as a placeholder
 
-const payload = await getPayload({ config });
+import { NextRequest, NextResponse } from 'next/server';
 
-export const GET = async (request: NextRequest, { params }: { params: Promise<{ segments?: string[] }> }) => {
-  const { segments } = await params;
-  const path = segments?.join('/') || '';
+export async function GET(request: NextRequest) {
+  // Payload v3 admin UI should be handled automatically
+  // If you see this, Payload admin might not be configured correctly
+  return NextResponse.json(
+    { error: 'Payload admin route not configured. Admin UI should be available at /admin' },
+    { status: 404 }
+  );
+}
 
-  return payload.handler(request, { path });
-};
-
-export const POST = async (request: NextRequest, { params }: { params: Promise<{ segments?: string[] }> }) => {
-  const { segments } = await params;
-  const path = segments?.join('/') || '';
-
-  return payload.handler(request, { path });
-};
+export async function POST(request: NextRequest) {
+  return GET(request);
+}

@@ -1,11 +1,11 @@
-import { buildConfig } from 'payload/config';
+import { buildConfig } from 'payload';
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import { slateEditor } from '@payloadcms/richtext-slate';
-import { cloudStorage } from '@payloadcms/plugin-cloud-storage';
-import { vercelBlobStorage } from '@payloadcms/plugin-cloud-storage/vercel-blob';
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob';
 import path from 'path';
 
 export default buildConfig({
+  secret: process.env.PAYLOAD_SECRET || 'your-secret-key-here',
   admin: {
     user: 'users',
   },
@@ -253,13 +253,10 @@ export default buildConfig({
     },
   ],
   plugins: [
-    cloudStorage({
+    vercelBlobStorage({
+      token: process.env.BLOB_READ_WRITE_TOKEN || '',
       collections: {
-        'campaign-assets': {
-          adapter: vercelBlobStorage({
-            token: process.env.BLOB_READ_WRITE_TOKEN || '',
-          }),
-        },
+        'campaign-assets': true,
       },
     }),
   ],
