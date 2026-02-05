@@ -185,7 +185,9 @@ export default nextConfig;
   };
 
   // Generate page.tsx
-  const pageContent = generatePageComponent(heroContent, descriptionContent, cardContent, signupContent);
+  const backgroundColor = site.backgroundColor || '#000000';
+  const textColor = site.textColor || '#FFFFFF';
+  const pageContent = generatePageComponent(heroContent, descriptionContent, cardContent, signupContent, backgroundColor, textColor);
 
   // Generate layout.tsx (conditionally include Clerk based on enableUserManagement)
   const clerkProvider = site.enableUserManagement 
@@ -370,7 +372,9 @@ function generatePageComponent(
   heroContent: any,
   descriptionContent: any[],
   cardContent: any[],
-  signupContent: any
+  signupContent: any,
+  backgroundColor: string = '#000000',
+  textColor: string = '#FFFFFF'
 ): string {
   // Helper function to safely stringify values for JSX
   const jsxValue = (value: any): string => {
@@ -385,11 +389,12 @@ function generatePageComponent(
       if (desc.contentType === 'richText' && desc.content?.html) {
         return `            <div
               key={${jsxValue(key)}}
-              className="text-white text-sm xl:text-base mb-4"
+              className="text-sm xl:text-base mb-4"
+              style={{ color: ${jsxValue(textColor)} }}
               dangerouslySetInnerHTML={{ __html: ${jsxValue(desc.content.html)} }}
             />`;
       } else if (desc.contentType === 'text' && desc.content?.text) {
-        return `            <p key={${jsxValue(key)}} className="text-white text-sm xl:text-base mb-4">
+        return `            <p key={${jsxValue(key)}} className="text-sm xl:text-base mb-4" style={{ color: ${jsxValue(textColor)} }}>
               {${jsxValue(desc.content.text)}}
             </p>`;
       }
@@ -614,8 +619,11 @@ export default function Home() {
     buttonText: ${jsxValue(signupContent.buttonText || 'Subscribe')},
   };
 
+  const backgroundColorValue = ${jsxValue(backgroundColor)};
+  const textColorValue = ${jsxValue(textColor)};
+
   return (
-    <div className="bg-black min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: backgroundColorValue }}>
       {/* Video Background */}
       {heroContent.backgroundVideo && (
         <div 
@@ -677,7 +685,7 @@ export default function Home() {
           {/* Text Content - shown third on mobile, on left on desktop */}
           <div className="my-auto w-full max-w-3xl order-3 xl:order-1">
             {heroContent.title && (
-              <h1 className="text-white text-4xl xl:text-6xl leading-tight mb-6 xl:mb-8 font-bold">
+              <h1 className="text-4xl xl:text-6xl leading-tight mb-6 xl:mb-8 font-bold" style={{ color: textColorValue }}>
                 {heroContent.title}
               </h1>
             )}

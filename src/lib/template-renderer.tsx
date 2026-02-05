@@ -11,7 +11,14 @@ interface SiteContent {
   isVisible: boolean;
 }
 
-export function renderTemplate(templateId: string, content: SiteContent[], assets: any[] = [], isPreview: boolean = false): React.ReactElement {
+export function renderTemplate(
+  templateId: string, 
+  content: SiteContent[], 
+  assets: any[] = [], 
+  isPreview: boolean = false,
+  backgroundColor: string = '#000000',
+  textColor: string = '#FFFFFF'
+): React.ReactElement {
   // Get content organized by section
   const contentBySection = content.reduce((acc, item) => {
     if (!acc[item.section]) {
@@ -29,16 +36,18 @@ export function renderTemplate(templateId: string, content: SiteContent[], asset
   // Render based on template
   switch (templateId) {
     case 'collectible-campaign':
-      return renderCollectibleCampaign(contentBySection, assets, isPreview);
+      return renderCollectibleCampaign(contentBySection, assets, isPreview, backgroundColor, textColor);
     default:
-      return React.createElement('div', { className: 'p-4 text-white' }, `Template not found: ${templateId}`);
+      return React.createElement('div', { className: 'p-4', style: { color: textColor } }, `Template not found: ${templateId}`);
   }
 }
 
 function renderCollectibleCampaign(
   contentBySection: Record<string, SiteContent[]>,
   assets: any[],
-  isPreview: boolean = false
+  isPreview: boolean = false,
+  backgroundColor: string = '#000000',
+  textColor: string = '#FFFFFF'
 ): React.ReactElement {
   // Get hero content - handle both text content type (with title/subtitle) and hero content type
   let heroContent: any = {};
@@ -61,7 +70,7 @@ function renderCollectibleCampaign(
   const heightClass = isPreview ? "h-full" : "min-h-screen";
 
   return (
-    <div className={`bg-black ${isPreview ? "h-full" : "min-h-screen"}`}>
+    <div className={isPreview ? "h-full" : "min-h-screen"} style={{ backgroundColor }}>
       {/* Video Background */}
       {heroContent.backgroundVideo && (
         <div className={`${positionClass} top-0 left-0 w-full ${heightClass} opacity-80`}>
@@ -112,7 +121,7 @@ function renderCollectibleCampaign(
           {/* Text Content - shown third on mobile, on left on desktop */}
           <div className="my-auto w-full max-w-3xl order-3 xl:order-1">
             {heroContent.title && (
-              <h1 className="text-white text-4xl xl:text-6xl leading-tight mb-6 xl:mb-8 font-bold">
+              <h1 className="text-4xl xl:text-6xl leading-tight mb-6 xl:mb-8 font-bold" style={{ color: textColor }}>
                 {heroContent.title}
               </h1>
             )}
@@ -122,13 +131,14 @@ function renderCollectibleCampaign(
                 return (
                   <div
                     key={desc.id}
-                    className="text-white text-sm xl:text-base mb-4"
+                    className="text-sm xl:text-base mb-4"
+                    style={{ color: textColor }}
                     dangerouslySetInnerHTML={{ __html: desc.content.html }}
                   />
                 );
               } else if (desc.contentType === 'text' && desc.content?.text) {
                 return (
-                  <p key={desc.id} className="text-white text-sm xl:text-base mb-4">
+                  <p key={desc.id} className="text-sm xl:text-base mb-4" style={{ color: textColor }}>
                     {desc.content.text}
                   </p>
                 );

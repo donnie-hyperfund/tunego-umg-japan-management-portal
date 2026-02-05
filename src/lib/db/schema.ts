@@ -130,6 +130,9 @@ export const campaignSites = pgTable('campaign_sites', {
   enableUserManagement: boolean('enable_user_management').notNull().default(true), // Whether site includes user authentication
   clerkPublishableKey: text('clerk_publishable_key'), // Site-specific Clerk publishable key (optional, falls back to global)
   clerkSecretKey: text('clerk_secret_key'), // Site-specific Clerk secret key (optional, falls back to global)
+  // Theme Configuration
+  backgroundColor: text('background_color'), // Site background color (hex code, e.g., #000000)
+  textColor: text('text_color'), // Site text color (hex code, e.g., #FFFFFF)
 }, (table) => ({
   slugIdx: index('campaign_sites_slug_idx').on(table.slug),
   statusIdx: index('campaign_sites_status_idx').on(table.status),

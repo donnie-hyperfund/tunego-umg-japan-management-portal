@@ -22,11 +22,27 @@ export default function TemplatePreview({ siteId, templateId }: TemplatePreviewP
   const [content, setContent] = useState<SiteContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [templateName, setTemplateName] = useState<string | null>(null);
+  const [backgroundColor, setBackgroundColor] = useState<string>('#000000');
+  const [textColor, setTextColor] = useState<string>('#FFFFFF');
 
   useEffect(() => {
     fetchContent();
     fetchTemplateName();
+    fetchSiteData();
   }, [siteId, templateId]);
+
+  const fetchSiteData = async () => {
+    try {
+      const response = await fetch(`/api/sites/${siteId}`);
+      if (response.ok) {
+        const site = await response.json();
+        setBackgroundColor(site.backgroundColor || '#000000');
+        setTextColor(site.textColor || '#FFFFFF');
+      }
+    } catch (error) {
+      console.error("Error fetching site data:", error);
+    }
+  };
 
   const fetchTemplateName = async () => {
     try {
@@ -149,7 +165,7 @@ export default function TemplatePreview({ siteId, templateId }: TemplatePreviewP
         }}
       >
         <div className="relative w-full h-full" style={{ height: "800px", overflow: "auto" }}>
-          {renderTemplate(templateName, content, [], true)}
+          {renderTemplate(templateName, content, [], true, backgroundColor, textColor)}
         </div>
       </div>
     </div>

@@ -18,6 +18,8 @@ interface CampaignSite {
   enableUserManagement: boolean;
   clerkPublishableKey: string | null;
   clerkSecretKey: string | null;
+  backgroundColor: string | null;
+  textColor: string | null;
 }
 
 interface SiteFormState {
@@ -29,6 +31,8 @@ interface SiteFormState {
   enableUserManagement: boolean;
   clerkPublishableKey: string;
   clerkSecretKey: string;
+  backgroundColor: string;
+  textColor: string;
   originalName?: string; // Track original name to detect changes
 }
 
@@ -49,6 +53,8 @@ export default function SiteForm({ siteId }: SiteFormProps) {
     enableUserManagement: true,
     clerkPublishableKey: "",
     clerkSecretKey: "",
+    backgroundColor: "#000000",
+    textColor: "#FFFFFF",
     originalName: "",
   });
   const [hasVercelProject, setHasVercelProject] = useState(false);
@@ -74,6 +80,8 @@ export default function SiteForm({ siteId }: SiteFormProps) {
         enableUserManagement: site.enableUserManagement ?? true,
         clerkPublishableKey: site.clerkPublishableKey || "",
         clerkSecretKey: site.clerkSecretKey || "",
+        backgroundColor: site.backgroundColor || "#000000",
+        textColor: site.textColor || "#FFFFFF",
         originalName: site.name,
       });
       setHasVercelProject(!!site.vercelProjectId);
@@ -103,6 +111,8 @@ export default function SiteForm({ siteId }: SiteFormProps) {
           templateId: formData.templateId || null,
           clerkPublishableKey: formData.clerkPublishableKey || null,
           clerkSecretKey: formData.clerkSecretKey || null,
+          backgroundColor: formData.backgroundColor || null,
+          textColor: formData.textColor || null,
         }),
       });
 
@@ -267,6 +277,92 @@ export default function SiteForm({ siteId }: SiteFormProps) {
               <option value="published">Published</option>
               <option value="archived">Archived</option>
             </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Theme Configuration */}
+      <div className="bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl p-6 md:p-8">
+        <h3 className="text-lg font-semibold text-white mb-4">Theme Colors</h3>
+        <div className="space-y-6">
+          {/* Background Color */}
+          <div>
+            <label
+              htmlFor="backgroundColor"
+              className="block text-sm font-medium text-[#CCCCCC] mb-2"
+            >
+              Background Color
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                id="backgroundColor"
+                value={formData.backgroundColor}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    backgroundColor: e.target.value,
+                  }))
+                }
+                className="w-16 h-10 bg-[#060606] border border-[#1A1A1A] rounded-lg cursor-pointer"
+              />
+              <input
+                type="text"
+                value={formData.backgroundColor}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    backgroundColor: e.target.value,
+                  }))
+                }
+                placeholder="#000000"
+                pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                className="flex-1 px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors font-mono text-sm"
+              />
+            </div>
+            <p className="mt-1 text-xs text-[#8A8A8A]">
+              The background color for the site (hex code, e.g., #000000)
+            </p>
+          </div>
+
+          {/* Text Color */}
+          <div>
+            <label
+              htmlFor="textColor"
+              className="block text-sm font-medium text-[#CCCCCC] mb-2"
+            >
+              Text Color
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                id="textColor"
+                value={formData.textColor}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    textColor: e.target.value,
+                  }))
+                }
+                className="w-16 h-10 bg-[#060606] border border-[#1A1A1A] rounded-lg cursor-pointer"
+              />
+              <input
+                type="text"
+                value={formData.textColor}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    textColor: e.target.value,
+                  }))
+                }
+                placeholder="#FFFFFF"
+                pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                className="flex-1 px-4 py-2 bg-[#060606] border border-[#1A1A1A] rounded-lg text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#00A0FF] transition-colors font-mono text-sm"
+              />
+            </div>
+            <p className="mt-1 text-xs text-[#8A8A8A]">
+              The text color for the site (hex code, e.g., #FFFFFF)
+            </p>
           </div>
         </div>
       </div>
