@@ -6,8 +6,8 @@ import { campaignSites } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { put } from '@vercel/blob';
 import { isAdmin } from '@/lib/auth';
-import * as busboy from 'busboy';
 import { Readable } from 'stream';
+import * as Busboy from 'busboy';
 
 // Use Node.js runtime for file uploads (Edge runtime has limitations with FormData)
 export const runtime = 'nodejs';
@@ -107,6 +107,7 @@ export async function POST(
     let filename: string | null = null;
     let mimeType: string | null = null;
     let fileSize = 0;
+    let type: 'image' | 'video' | 'audio' | 'document' = 'document';
 
     try {
       // Get the request body as a stream
@@ -123,12 +124,12 @@ export async function POST(
 
       // Parse with busboy
       await new Promise<void>((resolve, reject) => {
-        const bb = busboy({ headers: { 'content-type': contentType } });
+        const bb = Busboy.default({ headers: { 'content-type': contentType } });
         
         bb.on('file', (name, file, info) => {
           const { filename: fname, encoding, mimeType: mime } = info;
           filename = fname;
-          mimeType = mime;
+          mimeType = mime as string | null;
           
           const chunks: Buffer[] = [];
           
@@ -157,6 +158,14 @@ export async function POST(
         return NextResponse.json({ error: 'No file provided' }, { status: 400 });
       }
 
+      // Determine file type - use type assertion since we know file was parsed successfully
+      const mimeTypeValue = mimeType as string | null;
+      if (mimeTypeValue) {
+        if (mimeTypeValue.startsWith('image/')) type = 'image';
+        else if (mimeTypeValue.startsWith('video/')) type = 'video';
+        else if (mimeTypeValue.startsWith('audio/')) type = 'audio';
+      }
+
     } catch (parseError: any) {
       console.error('FormData parsing error:', parseError);
       console.error('Content-Type:', contentType);
@@ -177,12 +186,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    // Determine file type
-    let type: 'image' | 'video' | 'audio' | 'document' = 'document';
-    if (mimeType?.startsWith('image/')) type = 'image';
-    else if (mimeType?.startsWith('video/')) type = 'video';
-    else if (mimeType?.startsWith('audio/')) type = 'audio';
 
     // Check for required environment variable
     if (!process.env.BLOB_READ_WRITE_TOKEN) {

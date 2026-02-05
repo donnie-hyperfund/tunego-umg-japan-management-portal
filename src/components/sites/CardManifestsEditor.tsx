@@ -621,7 +621,11 @@ export default function CardManifestsEditor({ siteId }: CardManifestsEditorProps
           setAssetPickerState({ ...assetPickerState, isOpen: false });
         }}
         filterType={assetPickerState.filterType || "image"}
-        title={`Select ${assetPickerState.field === "frontImageUrl" ? "Front" : assetPickerState.field === "backImageUrl" ? "Back" : "Preview"} Face ${newManifest[assetPickerState.field === "frontImageUrl" ? "frontMediaType" : assetPickerState.field === "backImageUrl" ? "backMediaType" : "image"] === "video" ? "Video" : "Image"}`}
+        title={`Select ${assetPickerState.field === "frontImageUrl" ? "Front" : assetPickerState.field === "backImageUrl" ? "Back" : "Preview"} Face ${(() => {
+          const field = assetPickerState.field;
+          const mediaType = field === "frontImageUrl" ? newManifest.frontMediaType : field === "backImageUrl" ? newManifest.backMediaType : "image";
+          return mediaType === "video" ? "Video" : "Image";
+        })()}`}
       />
 
       {manifests.length === 0 ? (

@@ -44,7 +44,7 @@ export async function POST(
       pathname: `sites/${id}/${filename}`,
       onUploadCompleted: {
         callbackUrl: `${request.nextUrl.origin}/api/sites/${id}/assets/upload-complete`,
-        metadata: JSON.stringify({ siteId: id, filename, contentType }),
+        tokenPayload: JSON.stringify({ siteId: id, filename, contentType }),
       },
     });
 
